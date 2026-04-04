@@ -8,6 +8,8 @@ import Collections from "./pages/Collections.tsx";
 import ProductDetail from "./pages/ProductDetail.tsx";
 import Cart from "./pages/Cart.tsx";
 import Wishlist from "./pages/Wishlist.tsx";
+import Checkout from "./pages/Checkout.tsx";
+import OrderSuccess from "./pages/OrderSuccess.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
