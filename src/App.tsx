@@ -8,6 +8,8 @@ import Collections from "./pages/Collections.tsx";
 import ProductDetail from "./pages/ProductDetail.tsx";
 import Cart from "./pages/Cart.tsx";
 import Wishlist from "./pages/Wishlist.tsx";
+import Checkout from "./pages/Checkout.tsx";
+import OrderSuccess from "./pages/OrderSuccess.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -25,6 +27,8 @@ const App = () => (
           <Route path="/product/:id" element={<ProductDetail />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/wishlist" element={<Wishlist />} />
+          <Route path="/checkout" element={<Checkout />} />
+          <Route path="/order-success" element={<OrderSuccess />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
