@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, ShoppingBag, Heart, Menu, X, User } from 'lucide-react';
 import { useCart } from '@/lib/store';
+import { useAuth } from '@/hooks/useAuth';
 
 const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const itemCount = useCart((s) => s.itemCount());
+  const { user } = useAuth();
 
   return (
     <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
@@ -54,7 +56,7 @@ const Navbar = () => {
               </span>
             )}
           </Link>
-          <Link to="/account" className="p-2 hover:text-gold transition-colors hidden md:block" aria-label="Account">
+          <Link to={user ? '/dashboard' : '/login'} className="p-2 hover:text-gold transition-colors hidden md:block" aria-label="Account">
             <User size={18} />
           </Link>
         </div>
@@ -87,8 +89,8 @@ const Navbar = () => {
             <Link to="/collections" onClick={() => setMenuOpen(false)} className="text-sm tracking-widest uppercase font-body font-medium py-2">
               All Collections
             </Link>
-            <Link to="/account" onClick={() => setMenuOpen(false)} className="text-sm tracking-widest uppercase font-body font-medium py-2">
-              My Account
+            <Link to={user ? '/dashboard' : '/login'} onClick={() => setMenuOpen(false)} className="text-sm tracking-widest uppercase font-body font-medium py-2">
+              {user ? 'My Account' : 'Login'}
             </Link>
           </nav>
         </div>
