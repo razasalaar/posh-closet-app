@@ -1,10 +1,10 @@
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { products, formatPrice } from '@/lib/data';
 import { useCart, useWishlist } from '@/lib/store';
-import { Star, ShoppingBag, Heart, Shield, Truck, Minus, Plus, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
+import { Star, ShoppingBag, Heart, Shield, Truck, Minus, Plus, ChevronLeft, ChevronRight, Eye, Zap } from 'lucide-react';
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -12,7 +12,9 @@ const ProductDetail = () => {
   const [currentImage, setCurrentImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [viewerCount] = useState(() => Math.floor(Math.random() * 500) + 800);
+  const navigate = useNavigate();
   const addToCart = useCart((s) => s.addToCart);
+  const buyNow = useCart((s) => s.buyNow);
   const toggleWishlist = useWishlist((s) => s.toggleWishlist);
   const isInWishlist = useWishlist((s) => product ? s.isInWishlist(product.id) : false);
 
@@ -140,22 +142,36 @@ const ProductDetail = () => {
             </div>
 
             {/* Actions */}
-            <div className="flex gap-3">
+            <div className="flex flex-col gap-3">
+              <div className="flex gap-3">
+                <Button
+                  variant="luxury"
+                  size="lg"
+                  className="flex-1"
+                  onClick={() => addToCart(product, quantity)}
+                >
+                  <ShoppingBag size={16} />
+                  Add to Cart
+                </Button>
+                <Button
+                  variant="luxury-outline"
+                  size="lg"
+                  onClick={() => toggleWishlist(product)}
+                >
+                  <Heart size={16} className={isInWishlist ? 'fill-gold text-gold' : ''} />
+                </Button>
+              </div>
               <Button
                 variant="luxury"
                 size="lg"
-                className="flex-1"
-                onClick={() => addToCart(product, quantity)}
+                className="w-full bg-gold hover:bg-gold/90 text-background"
+                onClick={() => {
+                  buyNow(product, quantity);
+                  navigate('/checkout');
+                }}
               >
-                <ShoppingBag size={16} />
-                Add to Cart
-              </Button>
-              <Button
-                variant="luxury-outline"
-                size="lg"
-                onClick={() => toggleWishlist(product)}
-              >
-                <Heart size={16} className={isInWishlist ? 'fill-gold text-gold' : ''} />
+                <Zap size={16} />
+                Buy It Now
               </Button>
             </div>
 
@@ -169,7 +185,7 @@ const ProductDetail = () => {
       </div>
 
       {/* Mobile sticky add to cart */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-background border-t border-border p-4">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-background border-t border-border p-4 space-y-2">
         <Button
           variant="luxury"
           size="lg"
@@ -178,6 +194,18 @@ const ProductDetail = () => {
         >
           <ShoppingBag size={16} />
           Add to Cart — {formatPrice(product.price * quantity)}
+        </Button>
+        <Button
+          variant="luxury"
+          size="lg"
+          className="w-full bg-gold hover:bg-gold/90 text-background"
+          onClick={() => {
+            buyNow(product, quantity);
+            navigate('/checkout');
+          }}
+        >
+          <Zap size={16} />
+          Buy It Now
         </Button>
       </div>
     </Layout>
