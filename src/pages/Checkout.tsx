@@ -97,9 +97,8 @@ const Checkout = () => {
   };
 
   const handleCompleteOrder = async () => {
-    const { user } = useAuth;
     // Save order to database
-    const { data: order, error } = await supabase.from('orders').insert({
+    const { data: order } = await supabase.from('orders').insert({
       user_id: (await supabase.auth.getUser()).data.user?.id || null,
       email: contact.email,
       phone: contact.phone || shipping.phone,
