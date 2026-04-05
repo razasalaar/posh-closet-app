@@ -6,6 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useCart } from '@/lib/store';
 import { formatPrice } from '@/lib/data';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { Check, ChevronLeft, CreditCard, Truck, User, ShoppingBag } from 'lucide-react';
 
 type Step = 1 | 2 | 3;
@@ -94,15 +96,39 @@ const Checkout = () => {
     if (step > 1) setStep((s) => (s - 1) as Step);
   };
 
-  const handleCompleteOrder = () => {
-    if (paymentMethod === 'cod') {
-      clearCart();
-      navigate('/order-success');
-    } else {
-      // Stripe integration will be added later
-      clearCart();
-      navigate('/order-success');
+  const handleCompleteOrder = async () => {
+    const { user } = useAuth;
+    // Save order to database
+    const { data: order, error } = await supabase.from('orders').insert({
+      user_id: (await supabase.auth.getUser()).data.user?.id || null,
+      email: contact.email,
+      phone: contact.phone || shipping.phone,
+      first_name: shipping.firstName,
+      last_name: shipping.lastName,
+      address: shipping.address,
+      city: shipping.city,
+      postal_code: shipping.postalCode,
+      total: grandTotal,
+      payment_method: paymentMethod,
+      discount_code: discountApplied ? discountCode : null,
+      discount_amount: discountAmount,
+    }).select().single();
+
+    if (order) {
+      // Save order items
+      const orderItems = items.map((item) => ({
+        order_id: order.id,
+        product_id: null, // static data products don't have DB ids yet
+        product_name: item.product.name,
+        product_price: item.product.price,
+        product_image: item.product.image,
+        quantity: item.quantity,
+      }));
+      await supabase.from('order_items').insert(orderItems);
     }
+
+    clearCart();
+    navigate('/order-success');
   };
 
   const applyDiscount = () => {
