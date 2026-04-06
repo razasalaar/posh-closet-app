@@ -31,39 +31,43 @@ const Cart = () => {
         <h1 className="font-heading text-3xl tracking-wider mb-8">Shopping Cart</h1>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Cart items */}
           <div className="lg:col-span-2 space-y-4">
-            {items.map((item) => (
-              <div key={item.product.id} className="flex gap-4 p-4 border border-border rounded-lg">
-                <Link to={`/product/${item.product.id}`} className="w-20 h-24 rounded-md overflow-hidden flex-shrink-0">
-                  <img src={item.product.image} alt={item.product.name} className="w-full h-full object-cover" />
-                </Link>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[10px] tracking-widest uppercase text-muted-foreground font-body">{item.product.brand}</p>
-                  <Link to={`/product/${item.product.id}`}>
-                    <h3 className="text-sm font-body font-medium truncate">{item.product.name}</h3>
+            {items.map((item, idx) => {
+              const mainImage = item.product.image_url || item.product.images?.[0] || '/placeholder.svg';
+              return (
+                <div key={`${item.product.id}_${item.selectedSize || idx}`} className="flex gap-4 p-4 border border-border rounded-lg">
+                  <Link to={`/product/${item.product.id}`} className="w-20 h-24 rounded-md overflow-hidden flex-shrink-0">
+                    <img src={mainImage} alt={item.product.name} className="w-full h-full object-cover" />
                   </Link>
-                  <p className="text-sm font-body font-semibold mt-1">{formatPrice(item.product.price)}</p>
-                  <div className="flex items-center justify-between mt-3">
-                    <div className="flex items-center border border-border rounded-md">
-                      <button onClick={() => updateQuantity(item.product.id, item.quantity - 1)} className="p-1.5 hover:bg-surface">
-                        <Minus size={12} />
-                      </button>
-                      <span className="px-3 text-sm font-body">{item.quantity}</span>
-                      <button onClick={() => updateQuantity(item.product.id, item.quantity + 1)} className="p-1.5 hover:bg-surface">
-                        <Plus size={12} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] tracking-widest uppercase text-muted-foreground font-body">{item.product.brand}</p>
+                    <Link to={`/product/${item.product.id}`}>
+                      <h3 className="text-sm font-body font-medium truncate">{item.product.name}</h3>
+                    </Link>
+                    {item.selectedSize && (
+                      <p className="text-xs font-body text-gold mt-0.5">Size: {item.selectedSize}</p>
+                    )}
+                    <p className="text-sm font-body font-semibold mt-1">{formatPrice(item.product.price)}</p>
+                    <div className="flex items-center justify-between mt-3">
+                      <div className="flex items-center border border-border rounded-md">
+                        <button onClick={() => updateQuantity(item.product.id, item.quantity - 1, item.selectedSize)} className="p-1.5 hover:bg-surface">
+                          <Minus size={12} />
+                        </button>
+                        <span className="px-3 text-sm font-body">{item.quantity}</span>
+                        <button onClick={() => updateQuantity(item.product.id, item.quantity + 1, item.selectedSize)} className="p-1.5 hover:bg-surface">
+                          <Plus size={12} />
+                        </button>
+                      </div>
+                      <button onClick={() => removeFromCart(item.product.id, item.selectedSize)} className="text-muted-foreground hover:text-destructive transition-colors">
+                        <Trash2 size={16} />
                       </button>
                     </div>
-                    <button onClick={() => removeFromCart(item.product.id)} className="text-muted-foreground hover:text-destructive transition-colors">
-                      <Trash2 size={16} />
-                    </button>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
-          {/* Order summary */}
           <div className="bg-surface rounded-lg p-6 h-fit space-y-4 lg:sticky lg:top-32">
             <h3 className="font-heading text-lg tracking-wider">Order Summary</h3>
             <div className="space-y-2 text-sm font-body">
