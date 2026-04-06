@@ -1,12 +1,26 @@
 import { Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import Layout from '@/components/layout/Layout';
 import ProductCard from '@/components/product/ProductCard';
 import { Button } from '@/components/ui/button';
-import { products } from '@/lib/data';
+import { supabase } from '@/integrations/supabase/client';
 import { ArrowRight } from 'lucide-react';
+import type { Product } from '@/lib/store';
 
 const Index = () => {
-  const featured = products.slice(0, 8);
+  const [featured, setFeatured] = useState<Product[]>([]);
+
+  useEffect(() => {
+    const fetch = async () => {
+      const { data } = await supabase
+        .from('products')
+        .select('*, categories(name, type)')
+        .eq('is_featured', true)
+        .limit(8);
+      setFeatured((data as any[]) || []);
+    };
+    fetch();
+  }, []);
 
   return (
     <Layout>
@@ -44,34 +58,22 @@ const Index = () => {
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Link to="/collections/men" className="group relative h-[400px] md:h-[500px] rounded-lg overflow-hidden">
-            <img
-              src="https://images.unsplash.com/photo-1617137968427-85924c800a22?w=800&h=600&fit=crop"
-              alt="Men's collection"
-              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-            />
+            <img src="https://images.unsplash.com/photo-1617137968427-85924c800a22?w=800&h=600&fit=crop" alt="Men's collection" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
             <div className="absolute inset-0 bg-primary/30 group-hover:bg-primary/40 transition-colors" />
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="text-center">
                 <h3 className="font-heading text-3xl md:text-4xl text-primary-foreground tracking-wider">Men</h3>
-                <p className="text-xs tracking-widest uppercase text-primary-foreground/80 font-body mt-2 flex items-center gap-2 justify-center">
-                  Explore <ArrowRight size={14} />
-                </p>
+                <p className="text-xs tracking-widest uppercase text-primary-foreground/80 font-body mt-2 flex items-center gap-2 justify-center">Explore <ArrowRight size={14} /></p>
               </div>
             </div>
           </Link>
           <Link to="/collections/women" className="group relative h-[400px] md:h-[500px] rounded-lg overflow-hidden">
-            <img
-              src="https://images.unsplash.com/photo-1496747611176-843222e1e57c?w=800&h=600&fit=crop"
-              alt="Women's collection"
-              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-            />
+            <img src="https://images.unsplash.com/photo-1496747611176-843222e1e57c?w=800&h=600&fit=crop" alt="Women's collection" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
             <div className="absolute inset-0 bg-primary/30 group-hover:bg-primary/40 transition-colors" />
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="text-center">
                 <h3 className="font-heading text-3xl md:text-4xl text-primary-foreground tracking-wider">Women</h3>
-                <p className="text-xs tracking-widest uppercase text-primary-foreground/80 font-body mt-2 flex items-center gap-2 justify-center">
-                  Explore <ArrowRight size={14} />
-                </p>
+                <p className="text-xs tracking-widest uppercase text-primary-foreground/80 font-body mt-2 flex items-center gap-2 justify-center">Explore <ArrowRight size={14} /></p>
               </div>
             </div>
           </Link>
@@ -91,20 +93,17 @@ const Index = () => {
             <ProductCard key={product.id} product={product} />
           ))}
         </div>
+        {featured.length === 0 && (
+          <p className="text-center text-muted-foreground font-body py-8">No featured products yet.</p>
+        )}
       </section>
 
       {/* Promo Banner */}
       <section className="bg-surface">
         <div className="container py-16 md:py-24 text-center">
-          <p className="text-xs tracking-[0.3em] uppercase text-gold font-body font-semibold mb-3">
-            Exclusive Offer
-          </p>
-          <h2 className="font-heading text-3xl md:text-5xl tracking-wider mb-4">
-            Free Shipping Nationwide
-          </h2>
-          <p className="text-muted-foreground font-body max-w-md mx-auto mb-8">
-            On all orders above Rs. 10,000. Premium packaging and fast delivery across Pakistan.
-          </p>
+          <p className="text-xs tracking-[0.3em] uppercase text-gold font-body font-semibold mb-3">Exclusive Offer</p>
+          <h2 className="font-heading text-3xl md:text-5xl tracking-wider mb-4">Free Shipping Nationwide</h2>
+          <p className="text-muted-foreground font-body max-w-md mx-auto mb-8">On all orders above Rs. 10,000. Premium packaging and fast delivery across Pakistan.</p>
           <Button variant="luxury" size="lg" asChild>
             <Link to="/collections">Shop Collection</Link>
           </Button>

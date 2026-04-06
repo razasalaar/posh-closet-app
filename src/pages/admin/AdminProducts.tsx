@@ -5,7 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { formatPrice } from '@/lib/data';
-import { Plus, Pencil, Trash2, X, Upload } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Upload, Image } from 'lucide-react';
+
+const SHIRT_SIZES = ['S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
+const TROUSER_SIZES = ['30', '32', '34', '36', '38', '40'];
 
 interface ProductForm {
   name: string;
@@ -15,9 +18,10 @@ interface ProductForm {
   description: string;
   rating: string;
   is_featured: boolean;
+  size_type: string;
 }
 
-const emptyForm: ProductForm = { name: '', brand: 'LUXE', price: '', category_id: '', description: '', rating: '4.5', is_featured: false };
+const emptyForm: ProductForm = { name: '', brand: 'LUXE', price: '', category_id: '', description: '', rating: '4.5', is_featured: false, size_type: '' };
 
 const AdminProducts = () => {
   const [products, setProducts] = useState<any[]>([]);
@@ -25,7 +29,9 @@ const AdminProducts = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<ProductForm>(emptyForm);
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [mainImage, setMainImage] = useState<File | null>(null);
+  const [extraImages, setExtraImages] = useState<(File | null)[]>([null, null, null]);
+  const [sizeQuantities, setSizeQuantities] = useState<Record<string, number>>({});
   const [saving, setSaving] = useState(false);
 
   const fetchData = async () => {
@@ -39,7 +45,7 @@ const AdminProducts = () => {
 
   useEffect(() => { fetchData(); }, []);
 
-  const handleEdit = (p: any) => {
+  const handleEdit = async (p: any) => {
     setEditingId(p.id);
     setForm({
       name: p.name,
@@ -49,7 +55,22 @@ const AdminProducts = () => {
       description: p.description || '',
       rating: String(p.rating),
       is_featured: p.is_featured,
+      size_type: p.size_type || '',
     });
+    setMainImage(null);
+    setExtraImages([null, null, null]);
+    // Load existing sizes
+    if (p.size_type) {
+      const { data: sizesData } = await supabase
+        .from('product_sizes')
+        .select('size_label, quantity')
+        .eq('product_id', p.id);
+      const sq: Record<string, number> = {};
+      (sizesData || []).forEach((s: any) => { sq[s.size_label] = s.quantity; });
+      setSizeQuantities(sq);
+    } else {
+      setSizeQuantities({});
+    }
     setShowForm(true);
   };
 
@@ -59,17 +80,31 @@ const AdminProducts = () => {
     fetchData();
   };
 
+  const uploadImage = async (file: File): Promise<string | null> => {
+    const ext = file.name.split('.').pop();
+    const path = `products/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+    const { error } = await supabase.storage.from('product-images').upload(path, file);
+    if (error) return null;
+    const { data } = supabase.storage.from('product-images').getPublicUrl(path);
+    return data.publicUrl;
+  };
+
   const handleSave = async () => {
     setSaving(true);
     let image_url: string | undefined;
+    const allImageUrls: string[] = [];
 
-    if (imageFile) {
-      const ext = imageFile.name.split('.').pop();
-      const path = `products/${Date.now()}.${ext}`;
-      const { error: uploadErr } = await supabase.storage.from('product-images').upload(path, imageFile);
-      if (!uploadErr) {
-        const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(path);
-        image_url = urlData.publicUrl;
+    // Upload main image
+    if (mainImage) {
+      const url = await uploadImage(mainImage);
+      if (url) { image_url = url; allImageUrls.push(url); }
+    }
+
+    // Upload extra images
+    for (const file of extraImages) {
+      if (file) {
+        const url = await uploadImage(file);
+        if (url) allImageUrls.push(url);
       }
     }
 
@@ -81,31 +116,63 @@ const AdminProducts = () => {
       description: form.description,
       rating: Number(form.rating),
       is_featured: form.is_featured,
+      size_type: form.size_type || null,
     };
-    if (image_url) {
-      payload.image_url = image_url;
-      payload.images = [image_url];
+    if (image_url) payload.image_url = image_url;
+    if (allImageUrls.length > 0) {
+      // If editing and no new main image, keep existing
+      if (editingId && !mainImage) {
+        const existing = products.find(p => p.id === editingId);
+        if (existing?.image_url) allImageUrls.unshift(existing.image_url);
+      }
+      payload.images = allImageUrls;
     }
 
+    let productId = editingId;
     if (editingId) {
       await supabase.from('products').update(payload).eq('id', editingId);
     } else {
-      await supabase.from('products').insert(payload);
+      if (!image_url) {
+        payload.image_url = null;
+        payload.images = allImageUrls.length > 0 ? allImageUrls : [];
+      }
+      const { data } = await supabase.from('products').insert(payload).select().single();
+      if (data) productId = data.id;
+    }
+
+    // Save sizes
+    if (productId && form.size_type) {
+      // Delete existing sizes
+      await supabase.from('product_sizes').delete().eq('product_id', productId);
+      const sizeLabels = form.size_type === 'shirt' ? SHIRT_SIZES : TROUSER_SIZES;
+      const sizeRows = sizeLabels.map(label => ({
+        product_id: productId!,
+        size_label: label,
+        quantity: sizeQuantities[label] || 0,
+      }));
+      await supabase.from('product_sizes').insert(sizeRows);
+    } else if (productId && !form.size_type) {
+      // Remove sizes if type cleared
+      await supabase.from('product_sizes').delete().eq('product_id', productId);
     }
 
     setSaving(false);
     setShowForm(false);
     setEditingId(null);
     setForm(emptyForm);
-    setImageFile(null);
+    setMainImage(null);
+    setExtraImages([null, null, null]);
+    setSizeQuantities({});
     fetchData();
   };
+
+  const currentSizeLabels = form.size_type === 'shirt' ? SHIRT_SIZES : form.size_type === 'trouser' ? TROUSER_SIZES : [];
 
   return (
     <AdminLayout>
       <div className="flex items-center justify-between mb-6">
         <h1 className="font-heading text-2xl tracking-wider">Products</h1>
-        <Button variant="luxury" size="sm" onClick={() => { setShowForm(true); setEditingId(null); setForm(emptyForm); }}>
+        <Button variant="luxury" size="sm" onClick={() => { setShowForm(true); setEditingId(null); setForm(emptyForm); setSizeQuantities({}); }}>
           <Plus size={14} /> Add Product
         </Button>
       </div>
@@ -131,15 +198,9 @@ const AdminProducts = () => {
             </div>
             <div>
               <Label className="font-body text-xs uppercase tracking-wide">Category</Label>
-              <select
-                value={form.category_id}
-                onChange={(e) => setForm({ ...form, category_id: e.target.value })}
-                className="mt-1 w-full h-10 rounded-md border border-input bg-background px-3 text-sm font-body"
-              >
+              <select value={form.category_id} onChange={(e) => setForm({ ...form, category_id: e.target.value })} className="mt-1 w-full h-10 rounded-md border border-input bg-background px-3 text-sm font-body">
                 <option value="">Select category</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name} ({c.type})</option>
-                ))}
+                {categories.map((c) => <option key={c.id} value={c.id}>{c.name} ({c.type})</option>)}
               </select>
             </div>
             <div>
@@ -151,24 +212,75 @@ const AdminProducts = () => {
               <Label className="font-body text-xs">Featured Product</Label>
             </div>
           </div>
+
           <div>
             <Label className="font-body text-xs uppercase tracking-wide">Description</Label>
-            <textarea
-              value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
-              className="mt-1 w-full h-20 rounded-md border border-input bg-background px-3 py-2 text-sm font-body resize-none"
-            />
+            <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="mt-1 w-full h-20 rounded-md border border-input bg-background px-3 py-2 text-sm font-body resize-none" />
           </div>
-          <div>
-            <Label className="font-body text-xs uppercase tracking-wide">Product Image</Label>
-            <div className="mt-1 flex items-center gap-3">
-              <label className="flex items-center gap-2 px-4 py-2 border border-dashed border-border rounded-lg cursor-pointer hover:bg-muted transition-colors">
-                <Upload size={14} />
-                <span className="text-xs font-body">{imageFile ? imageFile.name : 'Choose file'}</span>
-                <input type="file" accept="image/*" className="hidden" onChange={(e) => setImageFile(e.target.files?.[0] || null)} />
-              </label>
+
+          {/* Images */}
+          <div className="space-y-3">
+            <Label className="font-body text-xs uppercase tracking-wide">Main Image</Label>
+            <label className="flex items-center gap-2 px-4 py-2 border border-dashed border-border rounded-lg cursor-pointer hover:bg-muted transition-colors w-fit">
+              <Upload size={14} />
+              <span className="text-xs font-body">{mainImage ? mainImage.name : 'Choose main image'}</span>
+              <input type="file" accept="image/*" className="hidden" onChange={(e) => setMainImage(e.target.files?.[0] || null)} />
+            </label>
+
+            <Label className="font-body text-xs uppercase tracking-wide">Additional Images (up to 3)</Label>
+            <div className="flex gap-3">
+              {[0, 1, 2].map((idx) => (
+                <label key={idx} className="flex items-center gap-1 px-3 py-2 border border-dashed border-border rounded-lg cursor-pointer hover:bg-muted transition-colors">
+                  <Image size={14} />
+                  <span className="text-[10px] font-body">{extraImages[idx] ? extraImages[idx]!.name.slice(0, 10) + '...' : `Image ${idx + 1}`}</span>
+                  <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                    const newArr = [...extraImages];
+                    newArr[idx] = e.target.files?.[0] || null;
+                    setExtraImages(newArr);
+                  }} />
+                </label>
+              ))}
             </div>
           </div>
+
+          {/* Size Type */}
+          <div className="space-y-3">
+            <Label className="font-body text-xs uppercase tracking-wide">Size Type</Label>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2 font-body text-sm">
+                <input type="checkbox" checked={form.size_type === 'shirt'} onChange={(e) => {
+                  setForm({ ...form, size_type: e.target.checked ? 'shirt' : '' });
+                  if (!e.target.checked) setSizeQuantities({});
+                }} />
+                Shirts (S–XXXL)
+              </label>
+              <label className="flex items-center gap-2 font-body text-sm">
+                <input type="checkbox" checked={form.size_type === 'trouser'} onChange={(e) => {
+                  setForm({ ...form, size_type: e.target.checked ? 'trouser' : '' });
+                  if (!e.target.checked) setSizeQuantities({});
+                }} />
+                Trousers (30–40)
+              </label>
+            </div>
+
+            {currentSizeLabels.length > 0 && (
+              <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+                {currentSizeLabels.map((label) => (
+                  <div key={label} className="space-y-1">
+                    <Label className="font-body text-[10px] uppercase text-muted-foreground">{label}</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={sizeQuantities[label] || 0}
+                      onChange={(e) => setSizeQuantities({ ...sizeQuantities, [label]: parseInt(e.target.value) || 0 })}
+                      className="font-body text-sm h-9"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <Button variant="luxury" onClick={handleSave} disabled={saving || !form.name || !form.price}>
             {saving ? 'Saving...' : editingId ? 'Update Product' : 'Add Product'}
           </Button>
@@ -183,7 +295,10 @@ const AdminProducts = () => {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-body font-medium truncate">{p.name}</p>
-              <p className="text-xs text-muted-foreground font-body">{p.brand} • {p.categories?.name || 'No category'}</p>
+              <p className="text-xs text-muted-foreground font-body">
+                {p.brand} • {p.categories?.name || 'No category'}
+                {p.size_type && ` • ${p.size_type === 'shirt' ? 'Shirt sizes' : 'Trouser sizes'}`}
+              </p>
             </div>
             <p className="text-sm font-body font-bold">{formatPrice(p.price)}</p>
             <div className="flex gap-1">

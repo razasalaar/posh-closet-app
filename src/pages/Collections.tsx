@@ -1,31 +1,68 @@
-import { useParams } from 'react-router-dom';
-import { useState, useMemo } from 'react';
+import { useParams, useSearchParams } from 'react-router-dom';
+import { useState, useEffect, useMemo } from 'react';
 import Layout from '@/components/layout/Layout';
 import ProductCard from '@/components/product/ProductCard';
-import { products, categories } from '@/lib/data';
+import { supabase } from '@/integrations/supabase/client';
 import { SlidersHorizontal, X } from 'lucide-react';
+import type { Product } from '@/lib/store';
 
 const Collections = () => {
   const { type } = useParams<{ type?: string }>();
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [searchParams] = useSearchParams();
+  const categoryParam = searchParams.get('category');
+
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>(categoryParam || 'all');
   const [sortBy, setSortBy] = useState<string>('default');
   const [showFilters, setShowFilters] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const filteredProducts = useMemo(() => {
-    let result = products;
-    if (type === 'men' || type === 'women') {
-      result = result.filter((p) => p.categoryType === type);
-    }
-    if (selectedCategory !== 'all') {
-      result = result.filter((p) => p.category === selectedCategory);
-    }
-    if (sortBy === 'price-low') result = [...result].sort((a, b) => a.price - b.price);
-    if (sortBy === 'price-high') result = [...result].sort((a, b) => b.price - a.price);
-    if (sortBy === 'rating') result = [...result].sort((a, b) => b.rating - a.rating);
+  useEffect(() => {
+    setSelectedCategory(categoryParam || 'all');
+  }, [categoryParam]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      // Fetch categories
+      let catQuery = supabase.from('categories').select('*').order('name');
+      if (type === 'men' || type === 'women') {
+        catQuery = catQuery.eq('type', type);
+      }
+      const { data: catData } = await catQuery;
+      setCategories(catData || []);
+
+      // Fetch products with category join
+      let prodQuery = supabase.from('products').select('*, categories(name, type)');
+      if (type === 'men' || type === 'women') {
+        // Filter by category type via inner join
+        const catIds = (catData || []).map((c: any) => c.id);
+        if (catIds.length > 0) {
+          prodQuery = prodQuery.in('category_id', catIds);
+        } else {
+          setProducts([]);
+          setLoading(false);
+          return;
+        }
+      }
+      if (selectedCategory !== 'all') {
+        prodQuery = prodQuery.eq('category_id', selectedCategory);
+      }
+      const { data: prodData } = await prodQuery;
+      setProducts((prodData as any[]) || []);
+      setLoading(false);
+    };
+    fetchData();
+  }, [type, selectedCategory]);
+
+  const sortedProducts = useMemo(() => {
+    let result = [...products];
+    if (sortBy === 'price-low') result.sort((a, b) => a.price - b.price);
+    if (sortBy === 'price-high') result.sort((a, b) => b.price - a.price);
+    if (sortBy === 'rating') result.sort((a, b) => (b.rating || 0) - (a.rating || 0));
     return result;
-  }, [type, selectedCategory, sortBy]);
-
-  const availableCategories = type === 'men' ? categories.men : type === 'women' ? categories.women : [...categories.men, ...categories.women];
+  }, [products, sortBy]);
 
   const title = type === 'men' ? "Men's Collection" : type === 'women' ? "Women's Collection" : 'All Collections';
 
@@ -36,7 +73,7 @@ const Collections = () => {
 
         {/* Desktop filters */}
         <div className="hidden md:flex items-center justify-between mb-8 pb-4 border-b border-border">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <span className="text-xs tracking-widest uppercase font-body text-muted-foreground">Filter:</span>
             <button
               onClick={() => setSelectedCategory('all')}
@@ -44,7 +81,7 @@ const Collections = () => {
             >
               All
             </button>
-            {availableCategories.map((cat) => (
+            {categories.map((cat) => (
               <button
                 key={cat.id}
                 onClick={() => setSelectedCategory(cat.id)}
@@ -66,17 +103,21 @@ const Collections = () => {
           </select>
         </div>
 
-        {/* Products Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-          {filteredProducts.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
-
-        {filteredProducts.length === 0 && (
-          <div className="text-center py-20">
-            <p className="text-muted-foreground font-body">No products found in this category.</p>
-          </div>
+        {loading ? (
+          <p className="text-center text-muted-foreground font-body py-12">Loading products...</p>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+              {sortedProducts.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+            {sortedProducts.length === 0 && (
+              <div className="text-center py-20">
+                <p className="text-muted-foreground font-body">No products found in this category.</p>
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -106,7 +147,7 @@ const Collections = () => {
                 >
                   All
                 </button>
-                {availableCategories.map((cat) => (
+                {categories.map((cat) => (
                   <button
                     key={cat.id}
                     onClick={() => setSelectedCategory(cat.id)}

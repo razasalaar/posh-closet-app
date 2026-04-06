@@ -83,31 +83,30 @@ const Dashboard = () => {
                 <div key={order.id} className="border border-border rounded-lg p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs text-muted-foreground font-body">
-                        Order #{order.id.slice(0, 8).toUpperCase()}
-                      </p>
-                      <p className="text-xs text-muted-foreground font-body">
-                        {new Date(order.created_at).toLocaleDateString()}
-                      </p>
+                      <p className="text-xs text-muted-foreground font-body">Order #{order.id.slice(0, 8).toUpperCase()}</p>
+                      <p className="text-xs text-muted-foreground font-body">{new Date(order.created_at).toLocaleDateString()}</p>
                     </div>
                     <div className={`flex items-center gap-1.5 text-xs font-body font-medium ${sc.color}`}>
-                      <StatusIcon size={14} />
-                      {sc.label}
+                      <StatusIcon size={14} /> {sc.label}
                     </div>
                   </div>
-                  <div className="flex gap-2 overflow-x-auto">
+                  <div className="space-y-1">
                     {order.order_items?.map((item: any) => (
-                      <div key={item.id} className="flex-shrink-0 w-12 h-14 rounded overflow-hidden bg-surface">
-                        {item.product_image && (
-                          <img src={item.product_image} alt={item.product_name} className="w-full h-full object-cover" />
-                        )}
+                      <div key={item.id} className="flex items-center gap-3">
+                        <div className="flex-shrink-0 w-10 h-12 rounded overflow-hidden bg-surface">
+                          {item.product_image && <img src={item.product_image} alt={item.product_name} className="w-full h-full object-cover" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-body truncate">{item.product_name}</p>
+                          {item.selected_size && <p className="text-[10px] text-gold font-body">Size: {item.selected_size}</p>}
+                        </div>
+                        <span className="text-xs font-body">×{item.quantity}</span>
+                        <span className="text-xs font-body font-medium">{formatPrice(item.product_price * item.quantity)}</span>
                       </div>
                     ))}
                   </div>
                   <div className="flex justify-between items-center pt-2 border-t border-border">
-                    <span className="text-xs text-muted-foreground font-body">
-                      {order.order_items?.length || 0} item(s)
-                    </span>
+                    <span className="text-xs text-muted-foreground font-body">{order.order_items?.length || 0} item(s)</span>
                     <span className="text-sm font-body font-bold">{formatPrice(order.total)}</span>
                   </div>
                 </div>

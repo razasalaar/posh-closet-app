@@ -5,26 +5,29 @@ export interface Product {
   name: string;
   brand: string;
   price: number;
-  category: string;
-  categoryType: 'men' | 'women';
-  image: string;
-  images: string[];
-  description: string;
-  rating: number;
-  reviews: number;
+  category_id: string | null;
+  image_url: string | null;
+  images: string[] | null;
+  description: string | null;
+  rating: number | null;
+  reviews: number | null;
+  is_featured: boolean | null;
+  size_type: string | null;
+  categories?: { name: string; type: string };
 }
 
 export interface CartItem {
   product: Product;
   quantity: number;
+  selectedSize?: string;
 }
 
 interface CartStore {
   items: CartItem[];
-  addToCart: (product: Product, quantity?: number) => void;
-  buyNow: (product: Product, quantity?: number) => void;
-  removeFromCart: (productId: string) => void;
-  updateQuantity: (productId: string, quantity: number) => void;
+  addToCart: (product: Product, quantity?: number, selectedSize?: string) => void;
+  buyNow: (product: Product, quantity?: number, selectedSize?: string) => void;
+  removeFromCart: (productId: string, selectedSize?: string) => void;
+  updateQuantity: (productId: string, quantity: number, selectedSize?: string) => void;
   clearCart: () => void;
   total: () => number;
   itemCount: () => number;
@@ -36,35 +39,47 @@ interface WishlistStore {
   isInWishlist: (productId: string) => boolean;
 }
 
+const cartItemKey = (id: string, size?: string) => `${id}_${size || ''}`;
+
 export const useCart = create<CartStore>((set, get) => ({
   items: [],
-  addToCart: (product, quantity = 1) => {
+  addToCart: (product, quantity = 1, selectedSize) => {
     set((state) => {
-      const existing = state.items.find((i) => i.product.id === product.id);
+      const existing = state.items.find(
+        (i) => i.product.id === product.id && i.selectedSize === selectedSize
+      );
       if (existing) {
         return {
           items: state.items.map((i) =>
-            i.product.id === product.id ? { ...i, quantity: i.quantity + quantity } : i
+            i.product.id === product.id && i.selectedSize === selectedSize
+              ? { ...i, quantity: i.quantity + quantity }
+              : i
           ),
         };
       }
-      return { items: [...state.items, { product, quantity }] };
+      return { items: [...state.items, { product, quantity, selectedSize }] };
     });
   },
-  buyNow: (product, quantity = 1) => {
-    set({ items: [{ product, quantity }] });
+  buyNow: (product, quantity = 1, selectedSize) => {
+    set({ items: [{ product, quantity, selectedSize }] });
   },
-  removeFromCart: (productId) => {
-    set((state) => ({ items: state.items.filter((i) => i.product.id !== productId) }));
+  removeFromCart: (productId, selectedSize) => {
+    set((state) => ({
+      items: state.items.filter(
+        (i) => !(i.product.id === productId && i.selectedSize === selectedSize)
+      ),
+    }));
   },
-  updateQuantity: (productId, quantity) => {
+  updateQuantity: (productId, quantity, selectedSize) => {
     if (quantity <= 0) {
-      get().removeFromCart(productId);
+      get().removeFromCart(productId, selectedSize);
       return;
     }
     set((state) => ({
       items: state.items.map((i) =>
-        i.product.id === productId ? { ...i, quantity } : i
+        i.product.id === productId && i.selectedSize === selectedSize
+          ? { ...i, quantity }
+          : i
       ),
     }));
   },

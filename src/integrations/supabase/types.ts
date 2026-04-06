@@ -45,6 +45,7 @@ export type Database = {
           product_name: string
           product_price: number
           quantity: number
+          selected_size: string | null
         }
         Insert: {
           created_at?: string
@@ -55,6 +56,7 @@ export type Database = {
           product_name: string
           product_price: number
           quantity?: number
+          selected_size?: string | null
         }
         Update: {
           created_at?: string
@@ -65,6 +67,7 @@ export type Database = {
           product_name?: string
           product_price?: number
           quantity?: number
+          selected_size?: string | null
         }
         Relationships: [
           {
@@ -140,6 +143,38 @@ export type Database = {
         }
         Relationships: []
       }
+      product_sizes: {
+        Row: {
+          created_at: string
+          id: string
+          product_id: string
+          quantity: number
+          size_label: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          product_id: string
+          quantity?: number
+          size_label: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          product_id?: string
+          quantity?: number
+          size_label?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_sizes_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           brand: string
@@ -154,6 +189,7 @@ export type Database = {
           price: number
           rating: number | null
           reviews: number | null
+          size_type: string | null
           updated_at: string
         }
         Insert: {
@@ -169,6 +205,7 @@ export type Database = {
           price: number
           rating?: number | null
           reviews?: number | null
+          size_type?: string | null
           updated_at?: string
         }
         Update: {
@@ -184,6 +221,7 @@ export type Database = {
           price?: number
           rating?: number | null
           reviews?: number | null
+          size_type?: string | null
           updated_at?: string
         }
         Relationships: [
