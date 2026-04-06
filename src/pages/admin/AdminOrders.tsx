@@ -77,13 +77,18 @@ const AdminOrders = () => {
 
                   <div>
                     <p className="text-xs text-muted-foreground font-body mb-2">Items:</p>
-                    <div className="space-y-1">
+                    <div className="space-y-2">
                       {order.order_items?.map((item: any) => (
                         <div key={item.id} className="flex items-center gap-3">
                           <div className="w-8 h-10 rounded overflow-hidden bg-muted">
                             {item.product_image && <img src={item.product_image} alt="" className="w-full h-full object-cover" />}
                           </div>
-                          <span className="text-xs font-body flex-1">{item.product_name}</span>
+                          <div className="flex-1 min-w-0">
+                            <span className="text-xs font-body">{item.product_name}</span>
+                            {item.selected_size && (
+                              <p className="text-[10px] text-gold font-body">Size: {item.selected_size}</p>
+                            )}
+                          </div>
                           <span className="text-xs font-body">×{item.quantity}</span>
                           <span className="text-xs font-body font-medium">{formatPrice(item.product_price * item.quantity)}</span>
                         </div>
