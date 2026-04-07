@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import AdminLayout from './AdminLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +19,8 @@ const AdminCategories = () => {
   const [type, setType] = useState<CategoryType>('men');
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  // Ref keeps the ID stable even after state is cleared by onOpenChange
+  const deleteTargetRef = useRef<string | null>(null);
 
   const fetchCategories = async () => {
     const { data, error } = await supabase.from('categories').select('*').order('type').order('name');
@@ -39,16 +41,25 @@ const AdminCategories = () => {
   };
 
   const handleDelete = async () => {
-    if (!deleteTarget) return;
-    const { error } = await supabase.from('categories').delete().eq('id', deleteTarget);
+    // Use ref value — state may already be null due to onOpenChange firing before onConfirm
+    const idToDelete = deleteTargetRef.current;
+    if (!idToDelete) return;
+    const { error, count } = await supabase
+      .from('categories')
+      .delete({ count: 'exact' })
+      .eq('id', idToDelete);
     if (error) {
-      toast.error('Failed to delete category');
+      toast.error(`Failed to delete category: ${error.message}`);
+    } else if (count === 0) {
+      toast.error('Delete failed: permission denied or not found.');
     } else {
       toast.success('Category deleted');
+      fetchCategories();
     }
+    deleteTargetRef.current = null;
     setDeleteTarget(null);
-    fetchCategories();
   };
+
 
   const handleSave = async () => {
     if (!name.trim()) return;
@@ -119,7 +130,7 @@ const AdminCategories = () => {
                   <span className="text-sm font-body font-medium">{c.name}</span>
                   <div className="flex gap-1">
                     <button onClick={() => handleEdit(c)} className="p-1.5 rounded hover:bg-muted"><Pencil size={14} /></button>
-                    <button onClick={() => setDeleteTarget(c.id)} className="p-1.5 rounded hover:bg-muted text-destructive"><Trash2 size={14} /></button>
+                    <button onClick={() => { deleteTargetRef.current = c.id; setDeleteTarget(c.id); }} className="p-1.5 rounded hover:bg-muted text-destructive"><Trash2 size={14} /></button>
                   </div>
                 </div>
               ))}

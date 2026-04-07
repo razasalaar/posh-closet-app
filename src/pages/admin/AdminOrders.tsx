@@ -13,11 +13,12 @@ const AdminOrders = () => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const fetchOrders = async () => {
-    const { data } = await supabase
-      .from('orders')
-      .select('*, order_items(*)')
-      .order('created_at', { ascending: false });
-    setOrders(data || []);
+    const { data, error } = await supabase.rpc('admin_get_orders');
+    if (error) {
+      console.error('Failed to fetch orders:', error.message);
+      return;
+    }
+    setOrders((data as unknown as any[]) || []);
   };
 
   useEffect(() => { fetchOrders(); }, []);

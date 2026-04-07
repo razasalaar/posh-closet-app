@@ -328,6 +328,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_delete_category: {
+        Args: { p_category_id: string }
+        Returns: undefined
+      }
+      admin_delete_product: {
+        Args: { p_product_id: string }
+        Returns: undefined
+      }
+      admin_get_orders: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

@@ -41,29 +41,38 @@ const NotificationBell = ({ isAdmin = false }: NotificationBellProps) => {
   }, [user]);
 
   useEffect(() => {
-  if (!user) return;
+    if (!user) return;
 
-  const channel = supabase.channel(`notifications-${user.id}`);
+    const channelName = `notifications-${user.id}`;
 
-  channel.on(
-    'postgres_changes',
-    {
-      event: 'INSERT',
-      schema: 'public',
-      table: 'notifications',
-      filter: `user_id=eq.${user.id}`,
-    },
-    (payload) => {
-      setNotifications((prev) => [payload.new as Notification, ...prev]);
+    // Remove any existing channel with the same name to prevent
+    // "cannot add postgres_changes callbacks after subscribe()" errors
+    // (triggered by React StrictMode double-mount or hot-reloads)
+    const existing = supabase.getChannels().find((ch) => ch.topic === `realtime:${channelName}`);
+    if (existing) {
+      supabase.removeChannel(existing);
     }
-  );
 
-  channel.subscribe();
+    const channel = supabase
+      .channel(channelName)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          setNotifications((prev) => [payload.new as Notification, ...prev]);
+        }
+      )
+      .subscribe();
 
-  return () => {
-    supabase.removeChannel(channel);
-  };
-}, [user?.id]);
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id]);
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
