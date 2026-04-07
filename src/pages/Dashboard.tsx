@@ -60,23 +60,22 @@ const Dashboard = () => {
 
   // Realtime order updates
   useEffect(() => {
-    if (!user) return;
-    const channel = supabase
-      .channel('user-orders')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'orders',
-          filter: `user_id=eq.${user.id}`,
-        },
-        () => { fetchOrders(); }
-      )
-      .subscribe();
+  // 🔥 CLEAR OLD CHANNELS
+  supabase.removeAllChannels();
 
-    return () => { supabase.removeChannel(channel); };
-  }, [user]);
+  const channel = supabase
+    .channel(`admin-orders-${Date.now()}`) // unique name
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'orders' },
+      () => { fetchOrders(); }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}, []);
 
   if (loading) return <Layout><div className="container py-20 text-center font-body">Loading...</div></Layout>;
   if (!user) return null;
