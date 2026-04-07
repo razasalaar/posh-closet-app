@@ -1,50 +1,101 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import AdminLayout from './AdminLayout';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { formatPrice } from '@/lib/data';
-import { CheckCircle, Truck, Package, ChevronDown, ChevronUp } from 'lucide-react';
+import { CheckCircle, Truck, Package, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Calendar, Filter } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
 type OrderStatus = Database['public']['Enums']['order_status'];
+type DateFilter = 'all' | 'today' | 'weekly' | 'monthly' | 'custom';
 
 const AdminOrders = () => {
   const [orders, setOrders] = useState<any[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const fetchOrders = async () => {
-    const { data, error } = await supabase.rpc('admin_get_orders');
+  // Filter state
+  const [dateFilter, setDateFilter] = useState<DateFilter>('all');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+
+  const fetchOrders = useCallback(async () => {
+    setLoading(true);
+    let start: string | null = null;
+    let end: string | null = null;
+
+    const now = new Date();
+    if (dateFilter === 'today') {
+      const todayStart = new Date(now);
+      todayStart.setHours(0, 0, 0, 0);
+      start = todayStart.toISOString();
+    } else if (dateFilter === 'weekly') {
+      const pre7Days = new Date(now);
+      pre7Days.setDate(now.getDate() - 7);
+      pre7Days.setHours(0, 0, 0, 0);
+      start = pre7Days.toISOString();
+    } else if (dateFilter === 'monthly') {
+      const pre30Days = new Date(now);
+      pre30Days.setDate(now.getDate() - 30);
+      pre30Days.setHours(0, 0, 0, 0);
+      start = pre30Days.toISOString();
+    } else if (dateFilter === 'custom') {
+      if (startDate) {
+        const sDate = new Date(startDate);
+        sDate.setHours(0, 0, 0, 0);
+        start = sDate.toISOString();
+      }
+      if (endDate) {
+        const eDate = new Date(endDate);
+        eDate.setHours(23, 59, 59, 999);
+        end = eDate.toISOString();
+      }
+    }
+
+    const { data, error } = await supabase.rpc('admin_get_orders', {
+      p_limit: itemsPerPage,
+      p_offset: (currentPage - 1) * itemsPerPage,
+      p_start_date: start,
+      p_end_date: end
+    });
+
     if (error) {
       console.error('Failed to fetch orders:', error.message);
-      return;
+    } else {
+      const result = data as any;
+      setOrders(result.orders || []);
+      setTotalCount(result.total_count || 0);
     }
-    setOrders((data as unknown as any[]) || []);
-  };
+    setLoading(false);
+  }, [currentPage, dateFilter, startDate, endDate]);
 
-  useEffect(() => { fetchOrders(); }, []);
+  useEffect(() => { fetchOrders(); }, [fetchOrders]);
 
   // Realtime: listen for new/updated orders
   useEffect(() => {
-  // 🔥 CLEAR OLD CHANNELS
-  supabase.removeAllChannels();
+    supabase.removeAllChannels();
+    const channel = supabase
+      .channel(`admin-orders-realtime`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'orders' },
+        () => { fetchOrders(); }
+      )
+      .subscribe();
 
-  const channel = supabase
-    .channel(`admin-orders-${Date.now()}`) // unique name
-    .on(
-      'postgres_changes',
-      { event: '*', schema: 'public', table: 'orders' },
-      () => { fetchOrders(); }
-    )
-    .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchOrders]);
 
-  return () => {
-    supabase.removeChannel(channel);
-  };
-}, []);
   const updateStatus = async (order: any, status: OrderStatus) => {
     await supabase.from('orders').update({ status }).eq('id', order.id);
 
-    // Send notification to client if they have a user_id
     if (order.user_id) {
       const messages: Record<string, { title: string; message: string }> = {
         confirmed: {
@@ -57,7 +108,7 @@ const AdminOrders = () => {
         },
         delivered: {
           title: 'Order Delivered! 🎉',
-          message: `Your order #${order.id.slice(0, 8).toUpperCase()} has been delivered. Thank you for shopping with LUXE! We hope you love your purchase.`,
+          message: `Your order #${order.id.slice(0, 8).toUpperCase()} has been delivered.`,
         },
       };
 
@@ -72,7 +123,6 @@ const AdminOrders = () => {
         });
       }
     }
-
     fetchOrders();
   };
 
@@ -84,106 +134,285 @@ const AdminOrders = () => {
     cancelled: 'bg-red-100 text-red-800',
   };
 
+  const totalPages = Math.ceil(totalCount / itemsPerPage);
+
   return (
     <AdminLayout>
-      <h1 className="font-heading text-2xl tracking-wider mb-6">Orders</h1>
-
-      {orders.length === 0 ? (
-        <p className="text-center text-muted-foreground font-body py-8">No orders yet.</p>
-      ) : (
-        <div className="space-y-3">
-          {orders.map((order) => (
-            <div key={order.id} className="border border-border rounded-lg overflow-hidden">
-              <button
-                onClick={() => setExpandedId(expandedId === order.id ? null : order.id)}
-                className="w-full flex items-center justify-between p-4 hover:bg-surface transition-colors"
-              >
-                <div className="flex items-center gap-4 text-left">
-                  <div>
-                    <p className="text-sm font-body font-medium">#{order.id.slice(0, 8).toUpperCase()}</p>
-                    <p className="text-xs text-muted-foreground font-body">
-                      {order.first_name} {order.last_name} • {order.phone}
-                    </p>
-                    <p className="text-[10px] text-muted-foreground font-body">
-                      {new Date(order.created_at).toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className={`text-[10px] font-body font-medium px-2 py-0.5 rounded-full ${statusColors[order.status]}`}>
-                    {order.status.replace('_', ' ').toUpperCase()}
-                  </span>
-                  <span className="text-sm font-body font-bold">{formatPrice(order.total)}</span>
-                  {expandedId === order.id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                </div>
-              </button>
-
-              {expandedId === order.id && (
-                <div className="border-t border-border p-4 space-y-4 bg-surface/50">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs font-body">
-                    <div><span className="text-muted-foreground">Email:</span> <p>{order.email || '-'}</p></div>
-                    <div><span className="text-muted-foreground">Phone:</span> <p>{order.phone || '-'}</p></div>
-                    <div><span className="text-muted-foreground">City:</span> <p>{order.city || '-'}</p></div>
-                    <div><span className="text-muted-foreground">Address:</span> <p>{order.address || '-'}</p></div>
-                  </div>
-
-                  {order.payment_method && (
-                    <div className="text-xs font-body">
-                      <span className="text-muted-foreground">Payment:</span> <span className="font-medium uppercase">{order.payment_method}</span>
-                    </div>
-                  )}
-
-                  <div>
-                    <p className="text-xs text-muted-foreground font-body mb-2">Items:</p>
-                    <div className="space-y-2">
-                      {order.order_items?.map((item: any) => (
-                        <div key={item.id} className="flex items-center gap-3 bg-background rounded-lg p-2">
-                          <div className="w-10 h-12 rounded overflow-hidden bg-muted flex-shrink-0">
-                            {item.product_image && <img src={item.product_image} alt="" className="w-full h-full object-cover" />}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <span className="text-xs font-body font-medium">{item.product_name}</span>
-                            <div className="flex gap-2 mt-0.5">
-                              {item.selected_size && (
-                                <span className="text-[10px] font-body bg-gold/10 text-gold px-1.5 py-0.5 rounded">Size: {item.selected_size}</span>
-                              )}
-                              <span className="text-[10px] font-body text-muted-foreground">Qty: {item.quantity}</span>
-                            </div>
-                          </div>
-                          <span className="text-xs font-body font-medium">{formatPrice(item.product_price * item.quantity)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {order.discount_code && (
-                    <div className="text-xs font-body text-gold">
-                      Discount: {order.discount_code} (-{formatPrice(order.discount_amount || 0)})
-                    </div>
-                  )}
-
-                  <div className="flex gap-2 pt-2">
-                    {order.status === 'pending' && (
-                      <Button size="sm" variant="outline" onClick={() => updateStatus(order, 'confirmed')}>
-                        <CheckCircle size={14} /> Confirm
-                      </Button>
-                    )}
-                    {order.status === 'confirmed' && (
-                      <Button size="sm" variant="outline" onClick={() => updateStatus(order, 'ready_to_ship')}>
-                        <Truck size={14} /> Ready to Ship
-                      </Button>
-                    )}
-                    {order.status === 'ready_to_ship' && (
-                      <Button size="sm" variant="outline" onClick={() => updateStatus(order, 'delivered')}>
-                        <Package size={14} /> Delivered
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
+      <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
+        <h1 className="font-heading text-2xl tracking-wider">Orders</h1>
+        
+        <div className="flex flex-wrap items-center gap-1 bg-surface p-1.5 rounded-lg border border-border shadow-sm">
+          <Filter size={14} className="text-muted-foreground ml-1 mr-1" />
+          <Button 
+            variant={dateFilter === 'all' ? 'luxury' : 'ghost'} 
+            size="sm" 
+            onClick={() => { setDateFilter('all'); setCurrentPage(1); }}
+            className="text-[10px] h-7 px-2.5"
+          >
+            All
+          </Button>
+          <Button 
+            variant={dateFilter === 'today' ? 'luxury' : 'ghost'} 
+            size="sm" 
+            onClick={() => { setDateFilter('today'); setCurrentPage(1); }}
+            className="text-[10px] h-7 px-2.5"
+          >
+            Today
+          </Button>
+          <Button 
+            variant={dateFilter === 'weekly' ? 'luxury' : 'ghost'} 
+            size="sm" 
+            onClick={() => { setDateFilter('weekly'); setCurrentPage(1); }}
+            className="text-[10px] h-7 px-2.5"
+          >
+            Weekly
+          </Button>
+          <Button 
+            variant={dateFilter === 'monthly' ? 'luxury' : 'ghost'} 
+            size="sm" 
+            onClick={() => { setDateFilter('monthly'); setCurrentPage(1); }}
+            className="text-[10px] h-7 px-2.5"
+          >
+            Monthly
+          </Button>
+          <Button 
+            variant={dateFilter === 'custom' ? 'luxury' : 'ghost'} 
+            size="sm" 
+            onClick={() => { setDateFilter('custom'); setCurrentPage(1); }}
+            className="text-[10px] h-7 px-2.5"
+          >
+            Custom
+          </Button>
         </div>
+      </div>
+
+      {dateFilter === 'custom' && (
+        <div className="bg-surface border border-border rounded-lg p-4 mb-6 animate-fade-in shadow-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+            <div>
+              <Label className="text-[10px] uppercase font-body text-muted-foreground mb-1 block">From Date</Label>
+              <div className="relative">
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
+                <Input 
+                  type="date" 
+                  value={startDate} 
+                  onChange={(e) => { setStartDate(e.target.value); setCurrentPage(1); }} 
+                  className="pl-9 h-9 text-xs font-body"
+                />
+              </div>
+            </div>
+            <div>
+              <Label className="text-[10px] uppercase font-body text-muted-foreground mb-1 block">To Date</Label>
+              <div className="relative">
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
+                <Input 
+                  type="date" 
+                  value={endDate} 
+                  onChange={(e) => { setEndDate(e.target.value); setCurrentPage(1); }} 
+                  className="pl-9 h-9 text-xs font-body"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-24 gap-4">
+          <div className="w-10 h-10 border-4 border-gold border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-xs font-body text-muted-foreground animate-pulse">Fetching orders...</p>
+        </div>
+      ) : orders.length === 0 ? (
+        <div className="text-center py-16 bg-surface/30 rounded-xl border border-dashed border-border shadow-sm">
+          <div className="mx-auto w-12 h-12 bg-muted rounded-full flex items-center justify-center mb-4">
+            <Filter size={20} className="text-muted-foreground" />
+          </div>
+          <h3 className="font-heading text-base tracking-wider mb-1">No Orders Found</h3>
+          <p className="text-xs text-muted-foreground font-body">Try adjusting your filters or date range.</p>
+        </div>
+      ) : (
+        <>
+          <div className="space-y-4 mb-8">
+            {orders.map((order) => (
+              <div key={order.id} className="border border-border rounded-xl overflow-hidden bg-background hover:shadow-lg transition-all duration-300">
+                <button
+                  onClick={() => setExpandedId(expandedId === order.id ? null : order.id)}
+                  className="w-full flex items-center justify-between p-4 hover:bg-surface/50 transition-colors"
+                >
+                  <div className="flex items-center gap-4 text-left">
+                    <div className="flex flex-col">
+                      <p className="text-sm font-body font-bold text-gold tracking-tight">#{order.id.slice(0, 8).toUpperCase()}</p>
+                      <p className="text-xs font-medium font-body mt-0.5">
+                        {order.first_name} {order.last_name}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground font-body">
+                        {new Date(order.created_at).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="text-right hidden sm:block">
+                      <p className="text-xs font-body text-muted-foreground">{order.phone}</p>
+                    </div>
+                    <span className={`text-[9px] font-bold font-body px-2.5 py-1 rounded-full uppercase tracking-wider ${statusColors[order.status as string] || 'bg-muted text-muted-foreground'}`}>
+                      {(order.status as string).replace('_', ' ').toUpperCase()}
+                    </span>
+                    <span className="text-sm font-semibold font-body min-w-[80px] text-right">{formatPrice(order.total)}</span>
+                    <div className={`p-1 rounded-full bg-muted/50 transition-transform duration-300 ${expandedId === order.id ? 'rotate-180' : ''}`}>
+                      <ChevronDown size={16} className="text-muted-foreground" />
+                    </div>
+                  </div>
+                </button>
+
+                {expandedId === order.id && (
+                  <div className="border-t border-border p-5 space-y-6 bg-surface/20 animate-in slide-in-from-top-2 duration-300">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-[11px] font-body">
+                      <div className="space-y-1.5 p-3 rounded-lg bg-background border border-border/40 shadow-sm">
+                        <span className="text-muted-foreground block text-[9px] uppercase font-bold tracking-widest">Customer Email</span>
+                        <p className="font-medium truncate">{order.email || '-'}</p>
+                      </div>
+                      <div className="space-y-1.5 p-3 rounded-lg bg-background border border-border/40 shadow-sm">
+                        <span className="text-muted-foreground block text-[9px] uppercase font-bold tracking-widest">Phone Number</span>
+                        <p className="font-medium">{order.phone || '-'}</p>
+                      </div>
+                      <div className="space-y-1.5 p-3 rounded-lg bg-background border border-border/40 shadow-sm">
+                        <span className="text-muted-foreground block text-[9px] uppercase font-bold tracking-widest">Delivery City</span>
+                        <p className="font-medium">{order.city || '-'}</p>
+                      </div>
+                      <div className="space-y-1.5 p-3 rounded-lg bg-background border border-border/40 shadow-sm">
+                        <span className="text-muted-foreground block text-[9px] uppercase font-bold tracking-widest">Shipping Address</span>
+                        <p className="font-medium leading-relaxed">{order.address || '-'}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-6 text-xs font-body py-4 border-y border-border/50">
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground font-bold text-[9px] uppercase tracking-widest">Payment:</span>
+                        <span className="font-bold uppercase text-gold bg-gold/5 px-2 py-0.5 rounded border border-gold/10">{order.payment_method}</span>
+                      </div>
+                      {order.discount_code && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground font-bold text-[9px] uppercase tracking-widest">Discount:</span>
+                          <span className="font-medium text-destructive bg-destructive/5 px-2 py-0.5 rounded border border-destructive/10">
+                            {order.discount_code} (-{formatPrice(order.discount_amount || 0)})
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <h4 className="text-[10px] uppercase font-heading tracking-widest text-muted-foreground mb-4">Items Summary</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {order.order_items?.map((item: any) => (
+                          <div key={item.id} className="flex items-center gap-3 bg-background border border-border/50 rounded-xl p-3 shadow-sm hover:border-gold/30 transition-colors">
+                            <div className="w-12 h-14 rounded-lg overflow-hidden bg-muted flex-shrink-0 border border-border/50">
+                              {item.product_image && <img src={item.product_image} alt="" className="w-full h-full object-cover" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-body font-bold truncate text-foreground/90">{item.product_name}</p>
+                              <div className="flex gap-2 mt-1.5">
+                                {item.selected_size && (
+                                  <span className="text-[9px] font-bold bg-gold/10 text-gold px-2 py-0.5 rounded-full border border-gold/10">SIZE: {item.selected_size}</span>
+                                )}
+                                <span className="text-[9px] font-medium bg-muted text-muted-foreground px-2.5 py-0.5 rounded-full">QTY: {item.quantity}</span>
+                              </div>
+                            </div>
+                            <span className="text-xs font-bold font-body text-gold">{formatPrice(item.product_price * item.quantity)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-3 pt-4 border-t border-border/50">
+                      {order.status === 'pending' && (
+                        <Button 
+                          size="sm" 
+                          variant="luxury" 
+                          onClick={() => updateStatus(order, 'confirmed')}
+                          className="h-9 px-5 text-[10px] font-bold tracking-wider"
+                        >
+                          <CheckCircle size={14} className="mr-2" /> CONFIRM ORDER
+                        </Button>
+                      )}
+                      {order.status === 'confirmed' && (
+                        <Button 
+                          size="sm" 
+                          variant="luxury" 
+                          onClick={() => updateStatus(order, 'ready_to_ship')}
+                          className="h-9 px-5 text-[10px] font-bold tracking-wider"
+                        >
+                          <Truck size={14} className="mr-2" /> SHIP ORDER
+                        </Button>
+                      )}
+                      {order.status === 'ready_to_ship' && (
+                        <Button 
+                          size="sm" 
+                          variant="luxury" 
+                          onClick={() => updateStatus(order, 'delivered')}
+                          className="h-9 px-5 text-[10px] font-bold tracking-wider"
+                        >
+                          <Package size={14} className="mr-2" /> MARK DELIVERED
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-6 px-4 border-t border-border mt-4">
+              <p className="text-[11px] text-muted-foreground font-body">
+                Showing <span className="font-bold text-foreground">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="font-bold text-foreground">{Math.min(currentPage * itemsPerPage, totalCount)}</span> of <span className="font-bold text-gold">{totalCount}</span> orders
+              </p>
+              <div className="flex items-center gap-1.5">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="w-8 h-8 rounded-lg"
+                  onClick={() => { setCurrentPage(prev => Math.max(1, prev - 1)); window.scrollTo(0, 0); }}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft size={14} />
+                </Button>
+                
+                <div className="flex items-center gap-1 mx-2">
+                  {[...Array(totalPages)].map((_, i) => {
+                    const p = i + 1;
+                    if (p === 1 || p === totalPages || (p >= currentPage - 1 && p <= currentPage + 1)) {
+                      return (
+                        <Button
+                          key={p}
+                          variant={currentPage === p ? 'luxury' : 'ghost'}
+                          size="sm"
+                          className={`w-8 h-8 text-[11px] font-bold rounded-lg transition-all ${currentPage === p ? 'shadow-md shadow-gold/20 scale-110' : ''}`}
+                          onClick={() => { setCurrentPage(p); window.scrollTo(0, 0); }}
+                        >
+                          {p}
+                        </Button>
+                      );
+                    } else if (p === currentPage - 2 || p === currentPage + 2) {
+                      return <span key={p} className="text-muted-foreground px-1 text-[10px]">...</span>;
+                    }
+                    return null;
+                  })}
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="w-8 h-8 rounded-lg"
+                  onClick={() => { setCurrentPage(prev => Math.min(totalPages, prev + 1)); window.scrollTo(0, 0); }}
+                  disabled={currentPage === totalPages}
+                >
+                  <ChevronRight size={14} />
+                </Button>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </AdminLayout>
   );

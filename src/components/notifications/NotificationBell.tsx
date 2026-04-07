@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bell } from 'lucide-react';
+import { Bell, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
@@ -32,7 +32,7 @@ const NotificationBell = ({ isAdmin = false }: NotificationBellProps) => {
       .select('*')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
-      .limit(20);
+      .limit(50);
     setNotifications((data as Notification[]) || []);
   };
 
@@ -45,9 +45,6 @@ const NotificationBell = ({ isAdmin = false }: NotificationBellProps) => {
 
     const channelName = `notifications-${user.id}`;
 
-    // Remove any existing channel with the same name to prevent
-    // "cannot add postgres_changes callbacks after subscribe()" errors
-    // (triggered by React StrictMode double-mount or hot-reloads)
     const existing = supabase.getChannels().find((ch) => ch.topic === `realtime:${channelName}`);
     if (existing) {
       supabase.removeChannel(existing);
@@ -77,13 +74,11 @@ const NotificationBell = ({ isAdmin = false }: NotificationBellProps) => {
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   const handleClick = async (notif: Notification) => {
-    // Mark as read
     if (!notif.is_read) {
       await supabase.from('notifications').update({ is_read: true }).eq('id', notif.id);
       setNotifications((prev) => prev.map((n) => n.id === notif.id ? { ...n, is_read: true } : n));
     }
     setOpen(false);
-    // Navigate to order
     if (notif.order_id) {
       if (isAdmin) {
         navigate('/admin/orders');
@@ -101,9 +96,20 @@ const NotificationBell = ({ isAdmin = false }: NotificationBellProps) => {
     setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
   };
 
+  const clearAll = async () => {
+    if (!user || notifications.length === 0) return;
+    const ids = notifications.map(n => n.id);
+    await supabase.from('notifications').delete().in('id', ids);
+    setNotifications([]);
+  };
+
   return (
     <div className="relative">
-      <button onClick={() => setOpen(!open)} className="p-2 hover:text-gold transition-colors relative" aria-label="Notifications">
+      <button
+        onClick={() => setOpen(!open)}
+        className="p-2 hover:text-gold transition-colors relative"
+        aria-label="Notifications"
+      >
         <Bell size={18} />
         {unreadCount > 0 && (
           <span className="absolute -top-0.5 -right-0.5 bg-destructive text-destructive-foreground text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center animate-pulse-soft">
@@ -115,32 +121,70 @@ const NotificationBell = ({ isAdmin = false }: NotificationBellProps) => {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full mt-2 w-80 max-h-96 overflow-y-auto bg-background border border-border rounded-lg shadow-xl z-50">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-              <h3 className="font-heading text-sm tracking-wider">Notifications</h3>
-              {unreadCount > 0 && (
-                <button onClick={markAllRead} className="text-[10px] font-body text-gold hover:underline">
-                  Mark all read
-                </button>
+          <div className="absolute right-0 top-full mt-2 w-80 bg-background border border-border rounded-lg shadow-xl z-50 flex flex-col">
+
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <h3 className="font-heading text-sm tracking-wider">Notifications</h3>
+                {notifications.length > 0 && (
+                  <span className="text-[9px] font-body text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">
+                    {notifications.length}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-3">
+                {notifications.length > 0 && (
+                  <button
+                    onClick={clearAll}
+                    className="flex items-center gap-1 text-[10px] font-body text-destructive hover:underline"
+                    title="Clear all notifications"
+                  >
+                    <Trash2 size={10} />
+                    Clear All
+                  </button>
+                )}
+                {unreadCount > 0 && (
+                  <button onClick={markAllRead} className="text-[10px] font-body text-gold hover:underline">
+                    Mark all read
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Scrollable list — ~3 items visible, scrollable beyond */}
+            <div className="overflow-y-auto" style={{ maxHeight: '13.5rem' }}>
+              {notifications.length === 0 ? (
+                <p className="text-xs text-muted-foreground font-body text-center py-8">
+                  No notifications yet
+                </p>
+              ) : (
+                notifications.map((notif) => (
+                  <button
+                    key={notif.id}
+                    onClick={() => handleClick(notif)}
+                    className={`w-full text-left px-4 py-3 border-b border-border last:border-0 hover:bg-surface transition-colors ${!notif.is_read ? 'bg-gold/5' : ''}`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-xs font-body font-medium truncate ${!notif.is_read ? 'text-foreground' : 'text-muted-foreground'}`}>
+                          {notif.title}
+                        </p>
+                        <p className="text-[10px] font-body text-muted-foreground mt-0.5 line-clamp-2">
+                          {notif.message}
+                        </p>
+                        <p className="text-[9px] font-body text-muted-foreground mt-1">
+                          {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true })}
+                        </p>
+                      </div>
+                      {!notif.is_read && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-gold flex-shrink-0 mt-1" />
+                      )}
+                    </div>
+                  </button>
+                ))
               )}
             </div>
-            {notifications.length === 0 ? (
-              <p className="text-xs text-muted-foreground font-body text-center py-8">No notifications yet</p>
-            ) : (
-              notifications.map((notif) => (
-                <button
-                  key={notif.id}
-                  onClick={() => handleClick(notif)}
-                  className={`w-full text-left px-4 py-3 border-b border-border last:border-0 hover:bg-surface transition-colors ${!notif.is_read ? 'bg-gold/5' : ''}`}
-                >
-                  <p className={`text-xs font-body font-medium ${!notif.is_read ? 'text-foreground' : 'text-muted-foreground'}`}>{notif.title}</p>
-                  <p className="text-[10px] font-body text-muted-foreground mt-0.5">{notif.message}</p>
-                  <p className="text-[9px] font-body text-muted-foreground mt-1">
-                    {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true })}
-                  </p>
-                </button>
-              ))
-            )}
           </div>
         </>
       )}
