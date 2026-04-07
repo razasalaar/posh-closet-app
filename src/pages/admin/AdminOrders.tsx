@@ -24,18 +24,22 @@ const AdminOrders = () => {
 
   // Realtime: listen for new/updated orders
   useEffect(() => {
-    const channel = supabase
-      .channel('admin-orders')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'orders' },
-        () => { fetchOrders(); }
-      )
-      .subscribe();
+  // 🔥 CLEAR OLD CHANNELS
+  supabase.removeAllChannels();
 
-    return () => { supabase.removeChannel(channel); };
-  }, []);
+  const channel = supabase
+    .channel(`admin-orders-${Date.now()}`) // unique name
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'orders' },
+      () => { fetchOrders(); }
+    )
+    .subscribe();
 
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}, []);
   const updateStatus = async (order: any, status: OrderStatus) => {
     await supabase.from('orders').update({ status }).eq('id', order.id);
 
