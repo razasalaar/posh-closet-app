@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import NotificationBell from '@/components/notifications/NotificationBell';
 import { Package, ShoppingBag, FolderOpen, LayoutDashboard, ArrowLeft } from 'lucide-react';
 
 const AdminLayout = ({ children }: { children: React.ReactNode }) => {
@@ -32,23 +33,26 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
             </Link>
             <span className="font-heading text-lg tracking-wider">LUXE Admin</span>
           </div>
-          <nav className="flex gap-1">
-            {links.map((l) => {
-              const active = location.pathname === l.to;
-              return (
-                <Link
-                  key={l.to}
-                  to={l.to}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-body font-medium transition-colors ${
-                    active ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                  }`}
-                >
-                  <l.icon size={14} />
-                  <span className="hidden sm:inline">{l.label}</span>
-                </Link>
-              );
-            })}
-          </nav>
+          <div className="flex items-center gap-2">
+            <nav className="flex gap-1">
+              {links.map((l) => {
+                const active = location.pathname === l.to;
+                return (
+                  <Link
+                    key={l.to}
+                    to={l.to}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-body font-medium transition-colors ${
+                      active ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                    }`}
+                  >
+                    <l.icon size={14} />
+                    <span className="hidden sm:inline">{l.label}</span>
+                  </Link>
+                );
+              })}
+            </nav>
+            <NotificationBell isAdmin />
+          </div>
         </div>
       </div>
       <div className="container py-6">{children}</div>

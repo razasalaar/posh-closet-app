@@ -4,7 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
+import ConfirmDialog from '@/components/ui/confirm-dialog';
 import { Plus, Pencil, Trash2, X } from 'lucide-react';
+import { toast } from 'sonner';
 import type { Database } from '@/integrations/supabase/types';
 
 type CategoryType = Database['public']['Enums']['category_type'];
@@ -16,9 +18,14 @@ const AdminCategories = () => {
   const [name, setName] = useState('');
   const [type, setType] = useState<CategoryType>('men');
   const [saving, setSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   const fetchCategories = async () => {
-    const { data } = await supabase.from('categories').select('*').order('type').order('name');
+    const { data, error } = await supabase.from('categories').select('*').order('type').order('name');
+    if (error) {
+      toast.error('Failed to load categories');
+      return;
+    }
     setCategories(data || []);
   };
 
@@ -31,18 +38,29 @@ const AdminCategories = () => {
     setShowForm(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Delete this category?')) return;
-    await supabase.from('categories').delete().eq('id', id);
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    const { error } = await supabase.from('categories').delete().eq('id', deleteTarget);
+    if (error) {
+      toast.error('Failed to delete category');
+    } else {
+      toast.success('Category deleted');
+    }
+    setDeleteTarget(null);
     fetchCategories();
   };
 
   const handleSave = async () => {
+    if (!name.trim()) return;
     setSaving(true);
     if (editingId) {
-      await supabase.from('categories').update({ name, type }).eq('id', editingId);
+      const { error } = await supabase.from('categories').update({ name: name.trim(), type }).eq('id', editingId);
+      if (error) toast.error('Failed to update category');
+      else toast.success('Category updated');
     } else {
-      await supabase.from('categories').insert({ name, type });
+      const { error } = await supabase.from('categories').insert({ name: name.trim(), type });
+      if (error) toast.error('Failed to add category');
+      else toast.success('Category added');
     }
     setSaving(false);
     setShowForm(false);
@@ -82,7 +100,7 @@ const AdminCategories = () => {
               </select>
             </div>
           </div>
-          <Button variant="luxury" onClick={handleSave} disabled={saving || !name}>
+          <Button variant="luxury" onClick={handleSave} disabled={saving || !name.trim()}>
             {saving ? 'Saving...' : editingId ? 'Update' : 'Add Category'}
           </Button>
         </div>
@@ -93,12 +111,15 @@ const AdminCategories = () => {
           <div key={group.title}>
             <h3 className="font-heading text-lg tracking-wider mb-3">{group.title}</h3>
             <div className="space-y-2">
+              {group.items.length === 0 && (
+                <p className="text-xs text-muted-foreground font-body py-4 text-center">No categories yet</p>
+              )}
               {group.items.map((c) => (
                 <div key={c.id} className="flex items-center justify-between border border-border rounded-lg px-4 py-3">
                   <span className="text-sm font-body font-medium">{c.name}</span>
                   <div className="flex gap-1">
                     <button onClick={() => handleEdit(c)} className="p-1.5 rounded hover:bg-muted"><Pencil size={14} /></button>
-                    <button onClick={() => handleDelete(c.id)} className="p-1.5 rounded hover:bg-muted text-destructive"><Trash2 size={14} /></button>
+                    <button onClick={() => setDeleteTarget(c.id)} className="p-1.5 rounded hover:bg-muted text-destructive"><Trash2 size={14} /></button>
                   </div>
                 </div>
               ))}
@@ -106,6 +127,14 @@ const AdminCategories = () => {
           </div>
         ))}
       </div>
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+        title="Delete Category"
+        description="Are you sure you want to delete this category? Products in this category won't be deleted but will become uncategorized."
+        onConfirm={handleDelete}
+      />
     </AdminLayout>
   );
 };

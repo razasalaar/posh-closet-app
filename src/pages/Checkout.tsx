@@ -7,7 +7,10 @@ import { Label } from '@/components/ui/label';
 import { useCart } from '@/lib/store';
 import { formatPrice } from '@/lib/data';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import LoginPromptDialog from '@/components/layout/LoginPromptDialog';
 import { Check, ChevronLeft, CreditCard, Truck, User, ShoppingBag } from 'lucide-react';
+import { toast } from 'sonner';
 
 type Step = 1 | 2 | 3;
 
@@ -22,6 +25,7 @@ const cities = [
 
 const Checkout = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { items, total, clearCart } = useCart();
   const cartTotal = total();
   const freeShipping = cartTotal >= 10000;
@@ -35,6 +39,8 @@ const Checkout = () => {
   const [contact, setContact] = useState<ContactInfo>({ email: '', phone: '' });
   const [shipping, setShipping] = useState<ShippingInfo>({ firstName: '', lastName: '', address: '', city: '', postalCode: '', phone: '' });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [placing, setPlacing] = useState(false);
 
   if (items.length === 0) {
     return (
@@ -81,23 +87,31 @@ const Checkout = () => {
   const discountAmount = discountApplied ? Math.round(cartTotal * 0.1) : 0;
   const grandTotal = finalTotal - discountAmount;
 
-  const handleCompleteOrder = async () => {
-    const { data: order } = await supabase.from('orders').insert({
-      user_id: (await supabase.auth.getUser()).data.user?.id || null,
-      email: contact.email,
-      phone: contact.phone || shipping.phone,
-      first_name: shipping.firstName,
-      last_name: shipping.lastName,
-      address: shipping.address,
-      city: shipping.city,
-      postal_code: shipping.postalCode,
-      total: grandTotal,
-      payment_method: paymentMethod,
-      discount_code: discountApplied ? discountCode : null,
-      discount_amount: discountAmount,
-    }).select().single();
+  const placeOrder = async () => {
+    setPlacing(true);
+    try {
+      const currentUser = (await supabase.auth.getUser()).data.user;
+      const { data: order, error: orderError } = await supabase.from('orders').insert({
+        user_id: currentUser?.id || null,
+        email: contact.email,
+        phone: contact.phone || shipping.phone,
+        first_name: shipping.firstName,
+        last_name: shipping.lastName,
+        address: shipping.address,
+        city: shipping.city,
+        postal_code: shipping.postalCode,
+        total: grandTotal,
+        payment_method: paymentMethod,
+        discount_code: discountApplied ? discountCode : null,
+        discount_amount: discountAmount,
+      }).select().single();
 
-    if (order) {
+      if (orderError || !order) {
+        toast.error('Failed to place order. Please try again.');
+        setPlacing(false);
+        return;
+      }
+
       const orderItems = items.map((item) => ({
         order_id: order.id,
         product_id: item.product.id,
@@ -108,10 +122,51 @@ const Checkout = () => {
         selected_size: item.selectedSize || null,
       }));
       await supabase.from('order_items').insert(orderItems);
-    }
 
-    clearCart();
-    navigate('/order-success');
+      // Store guest order in localStorage for later account linking
+      if (!currentUser) {
+        const guestOrders = JSON.parse(localStorage.getItem('guest_orders') || '[]');
+        guestOrders.push(order.id);
+        localStorage.setItem('guest_orders', JSON.stringify(guestOrders));
+      }
+
+      // Create admin notifications for new order
+      // Get all admin user_ids
+      const { data: adminRoles } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'admin');
+
+      if (adminRoles && adminRoles.length > 0) {
+        const adminNotifs = adminRoles.map((ar) => ({
+          user_id: ar.user_id,
+          type: 'new_order',
+          title: 'New Order Received!',
+          message: `${shipping.firstName} ${shipping.lastName} placed an order of ${formatPrice(grandTotal)}`,
+          order_id: order.id,
+        }));
+        await supabase.from('notifications').insert(adminNotifs);
+      }
+
+      clearCart();
+      navigate('/order-success');
+    } catch {
+      toast.error('Something went wrong. Please try again.');
+    }
+    setPlacing(false);
+  };
+
+  const handleCompleteOrder = async () => {
+    if (!user) {
+      setShowLoginPrompt(true);
+      return;
+    }
+    await placeOrder();
+  };
+
+  const handleContinueAsGuest = async () => {
+    setShowLoginPrompt(false);
+    await placeOrder();
   };
 
   const applyDiscount = () => {
@@ -127,7 +182,6 @@ const Checkout = () => {
   return (
     <Layout>
       <div className="container py-6 md:py-10 max-w-5xl">
-        {/* Progress steps */}
         <div className="flex items-center justify-center mb-8 gap-2">
           {stepLabels.map((s, idx) => (
             <div key={s.num} className="flex items-center gap-2">
@@ -243,14 +297,13 @@ const Checkout = () => {
                   </div>
                   {discountApplied && <p className="text-xs text-gold font-body mt-1">10% discount applied!</p>}
                 </div>
-                <Button variant="luxury" size="lg" className="w-full" onClick={handleCompleteOrder}>
-                  Complete Order — {formatPrice(grandTotal)}
+                <Button variant="luxury" size="lg" className="w-full" onClick={handleCompleteOrder} disabled={placing}>
+                  {placing ? 'Placing Order...' : `Complete Order — ${formatPrice(grandTotal)}`}
                 </Button>
               </div>
             )}
           </div>
 
-          {/* Order summary sidebar */}
           <div className="lg:col-span-2">
             <div className="bg-surface rounded-lg p-5 space-y-4 lg:sticky lg:top-24">
               <h3 className="font-heading text-base tracking-wider">Order Summary</h3>
@@ -285,6 +338,12 @@ const Checkout = () => {
           </div>
         </div>
       </div>
+
+      <LoginPromptDialog
+        open={showLoginPrompt}
+        onOpenChange={setShowLoginPrompt}
+        onContinueAsGuest={handleContinueAsGuest}
+      />
     </Layout>
   );
 };

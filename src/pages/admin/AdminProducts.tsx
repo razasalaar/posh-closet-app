@@ -5,7 +5,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { formatPrice } from '@/lib/data';
+import ConfirmDialog from '@/components/ui/confirm-dialog';
 import { Plus, Pencil, Trash2, X, Upload, Image } from 'lucide-react';
+import { toast } from 'sonner';
 
 const SHIRT_SIZES = ['S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
 const TROUSER_SIZES = ['30', '32', '34', '36', '38', '40'];
@@ -33,6 +35,7 @@ const AdminProducts = () => {
   const [extraImages, setExtraImages] = useState<(File | null)[]>([null, null, null]);
   const [sizeQuantities, setSizeQuantities] = useState<Record<string, number>>({});
   const [saving, setSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   const fetchData = async () => {
     const [prodRes, catRes] = await Promise.all([
@@ -59,7 +62,6 @@ const AdminProducts = () => {
     });
     setMainImage(null);
     setExtraImages([null, null, null]);
-    // Load existing sizes
     if (p.size_type) {
       const { data: sizesData } = await supabase
         .from('product_sizes')
@@ -74,9 +76,12 @@ const AdminProducts = () => {
     setShowForm(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Delete this product?')) return;
-    await supabase.from('products').delete().eq('id', id);
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    const { error } = await supabase.from('products').delete().eq('id', deleteTarget);
+    if (error) toast.error('Failed to delete product');
+    else toast.success('Product deleted');
+    setDeleteTarget(null);
     fetchData();
   };
 
@@ -94,13 +99,11 @@ const AdminProducts = () => {
     let image_url: string | undefined;
     const allImageUrls: string[] = [];
 
-    // Upload main image
     if (mainImage) {
       const url = await uploadImage(mainImage);
       if (url) { image_url = url; allImageUrls.push(url); }
     }
 
-    // Upload extra images
     for (const file of extraImages) {
       if (file) {
         const url = await uploadImage(file);
@@ -120,7 +123,6 @@ const AdminProducts = () => {
     };
     if (image_url) payload.image_url = image_url;
     if (allImageUrls.length > 0) {
-      // If editing and no new main image, keep existing
       if (editingId && !mainImage) {
         const existing = products.find(p => p.id === editingId);
         if (existing?.image_url) allImageUrls.unshift(existing.image_url);
@@ -140,9 +142,7 @@ const AdminProducts = () => {
       if (data) productId = data.id;
     }
 
-    // Save sizes
     if (productId && form.size_type) {
-      // Delete existing sizes
       await supabase.from('product_sizes').delete().eq('product_id', productId);
       const sizeLabels = form.size_type === 'shirt' ? SHIRT_SIZES : TROUSER_SIZES;
       const sizeRows = sizeLabels.map(label => ({
@@ -152,7 +152,6 @@ const AdminProducts = () => {
       }));
       await supabase.from('product_sizes').insert(sizeRows);
     } else if (productId && !form.size_type) {
-      // Remove sizes if type cleared
       await supabase.from('product_sizes').delete().eq('product_id', productId);
     }
 
@@ -163,6 +162,7 @@ const AdminProducts = () => {
     setMainImage(null);
     setExtraImages([null, null, null]);
     setSizeQuantities({});
+    toast.success(editingId ? 'Product updated' : 'Product added');
     fetchData();
   };
 
@@ -218,7 +218,6 @@ const AdminProducts = () => {
             <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="mt-1 w-full h-20 rounded-md border border-input bg-background px-3 py-2 text-sm font-body resize-none" />
           </div>
 
-          {/* Images */}
           <div className="space-y-3">
             <Label className="font-body text-xs uppercase tracking-wide">Main Image</Label>
             <label className="flex items-center gap-2 px-4 py-2 border border-dashed border-border rounded-lg cursor-pointer hover:bg-muted transition-colors w-fit">
@@ -243,7 +242,6 @@ const AdminProducts = () => {
             </div>
           </div>
 
-          {/* Size Type */}
           <div className="space-y-3">
             <Label className="font-body text-xs uppercase tracking-wide">Size Type</Label>
             <div className="flex gap-4">
@@ -303,7 +301,7 @@ const AdminProducts = () => {
             <p className="text-sm font-body font-bold">{formatPrice(p.price)}</p>
             <div className="flex gap-1">
               <button onClick={() => handleEdit(p)} className="p-1.5 rounded hover:bg-muted"><Pencil size={14} /></button>
-              <button onClick={() => handleDelete(p.id)} className="p-1.5 rounded hover:bg-muted text-destructive"><Trash2 size={14} /></button>
+              <button onClick={() => setDeleteTarget(p.id)} className="p-1.5 rounded hover:bg-muted text-destructive"><Trash2 size={14} /></button>
             </div>
           </div>
         ))}
@@ -311,6 +309,14 @@ const AdminProducts = () => {
           <p className="text-center text-muted-foreground font-body py-8">No products yet. Add your first product!</p>
         )}
       </div>
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+        title="Delete Product"
+        description="Are you sure you want to delete this product? This action cannot be undone."
+        onConfirm={handleDelete}
+      />
     </AdminLayout>
   );
 };

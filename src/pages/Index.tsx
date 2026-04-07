@@ -5,6 +5,7 @@ import ProductCard from '@/components/product/ProductCard';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { ArrowRight } from 'lucide-react';
+import heroBanner from '@/assets/hero-banner.jpg';
 import type { Product } from '@/lib/store';
 
 const Index = () => {
@@ -27,9 +28,11 @@ const Index = () => {
       {/* Hero */}
       <section className="relative h-[70vh] md:h-[85vh] overflow-hidden">
         <img
-          src="https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=1600&h=900&fit=crop"
-          alt="Luxury fashion collection"
+          src={heroBanner}
+          alt="Luxury Pakistani fashion collection"
           className="w-full h-full object-cover"
+          width={1600}
+          height={896}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-primary/60 via-primary/20 to-transparent" />
         <div className="absolute inset-0 flex items-end pb-16 md:pb-24">
