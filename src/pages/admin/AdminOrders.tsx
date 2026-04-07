@@ -22,8 +22,52 @@ const AdminOrders = () => {
 
   useEffect(() => { fetchOrders(); }, []);
 
-  const updateStatus = async (id: string, status: OrderStatus) => {
-    await supabase.from('orders').update({ status }).eq('id', id);
+  // Realtime: listen for new/updated orders
+  useEffect(() => {
+    const channel = supabase
+      .channel('admin-orders')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'orders' },
+        () => { fetchOrders(); }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, []);
+
+  const updateStatus = async (order: any, status: OrderStatus) => {
+    await supabase.from('orders').update({ status }).eq('id', order.id);
+
+    // Send notification to client if they have a user_id
+    if (order.user_id) {
+      const messages: Record<string, { title: string; message: string }> = {
+        confirmed: {
+          title: 'Order Confirmed! ✅',
+          message: `Your order #${order.id.slice(0, 8).toUpperCase()} has been confirmed and is being processed.`,
+        },
+        ready_to_ship: {
+          title: 'Ready to Ship! 🚚',
+          message: `Your order #${order.id.slice(0, 8).toUpperCase()} is packed and ready to ship.`,
+        },
+        delivered: {
+          title: 'Order Delivered! 🎉',
+          message: `Your order #${order.id.slice(0, 8).toUpperCase()} has been delivered. Thank you for shopping with LUXE! We hope you love your purchase.`,
+        },
+      };
+
+      const notifData = messages[status];
+      if (notifData) {
+        await supabase.from('notifications').insert({
+          user_id: order.user_id,
+          type: `order_${status}`,
+          title: notifData.title,
+          message: notifData.message,
+          order_id: order.id,
+        });
+      }
+    }
+
     fetchOrders();
   };
 
@@ -55,6 +99,9 @@ const AdminOrders = () => {
                     <p className="text-xs text-muted-foreground font-body">
                       {order.first_name} {order.last_name} • {order.phone}
                     </p>
+                    <p className="text-[10px] text-muted-foreground font-body">
+                      {new Date(order.created_at).toLocaleString()}
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
@@ -75,40 +122,54 @@ const AdminOrders = () => {
                     <div><span className="text-muted-foreground">Address:</span> <p>{order.address || '-'}</p></div>
                   </div>
 
+                  {order.payment_method && (
+                    <div className="text-xs font-body">
+                      <span className="text-muted-foreground">Payment:</span> <span className="font-medium uppercase">{order.payment_method}</span>
+                    </div>
+                  )}
+
                   <div>
                     <p className="text-xs text-muted-foreground font-body mb-2">Items:</p>
                     <div className="space-y-2">
                       {order.order_items?.map((item: any) => (
-                        <div key={item.id} className="flex items-center gap-3">
-                          <div className="w-8 h-10 rounded overflow-hidden bg-muted">
+                        <div key={item.id} className="flex items-center gap-3 bg-background rounded-lg p-2">
+                          <div className="w-10 h-12 rounded overflow-hidden bg-muted flex-shrink-0">
                             {item.product_image && <img src={item.product_image} alt="" className="w-full h-full object-cover" />}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <span className="text-xs font-body">{item.product_name}</span>
-                            {item.selected_size && (
-                              <p className="text-[10px] text-gold font-body">Size: {item.selected_size}</p>
-                            )}
+                            <span className="text-xs font-body font-medium">{item.product_name}</span>
+                            <div className="flex gap-2 mt-0.5">
+                              {item.selected_size && (
+                                <span className="text-[10px] font-body bg-gold/10 text-gold px-1.5 py-0.5 rounded">Size: {item.selected_size}</span>
+                              )}
+                              <span className="text-[10px] font-body text-muted-foreground">Qty: {item.quantity}</span>
+                            </div>
                           </div>
-                          <span className="text-xs font-body">×{item.quantity}</span>
                           <span className="text-xs font-body font-medium">{formatPrice(item.product_price * item.quantity)}</span>
                         </div>
                       ))}
                     </div>
                   </div>
 
+                  {order.discount_code && (
+                    <div className="text-xs font-body text-gold">
+                      Discount: {order.discount_code} (-{formatPrice(order.discount_amount || 0)})
+                    </div>
+                  )}
+
                   <div className="flex gap-2 pt-2">
                     {order.status === 'pending' && (
-                      <Button size="sm" variant="outline" onClick={() => updateStatus(order.id, 'confirmed')}>
+                      <Button size="sm" variant="outline" onClick={() => updateStatus(order, 'confirmed')}>
                         <CheckCircle size={14} /> Confirm
                       </Button>
                     )}
                     {order.status === 'confirmed' && (
-                      <Button size="sm" variant="outline" onClick={() => updateStatus(order.id, 'ready_to_ship')}>
+                      <Button size="sm" variant="outline" onClick={() => updateStatus(order, 'ready_to_ship')}>
                         <Truck size={14} /> Ready to Ship
                       </Button>
                     )}
                     {order.status === 'ready_to_ship' && (
-                      <Button size="sm" variant="outline" onClick={() => updateStatus(order.id, 'delivered')}>
+                      <Button size="sm" variant="outline" onClick={() => updateStatus(order, 'delivered')}>
                         <Package size={14} /> Delivered
                       </Button>
                     )}

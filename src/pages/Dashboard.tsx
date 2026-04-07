@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { formatPrice } from '@/lib/data';
+import NotificationBell from '@/components/notifications/NotificationBell';
 import { Package, Clock, Truck, CheckCircle, LogOut, ShieldCheck } from 'lucide-react';
 
 const statusConfig: Record<string, { label: string; icon: any; color: string }> = {
@@ -25,18 +26,56 @@ const Dashboard = () => {
     if (!loading && !user) navigate('/login');
   }, [user, loading, navigate]);
 
+  const fetchOrders = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from('orders')
+      .select('*, order_items(*)')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+    setOrders(data || []);
+    setLoadingOrders(false);
+  };
+
+  // Link guest orders on first login
   useEffect(() => {
     if (!user) return;
-    const fetchOrders = async () => {
-      const { data } = await supabase
-        .from('orders')
-        .select('*, order_items(*)')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-      setOrders(data || []);
-      setLoadingOrders(false);
+    const linkGuestOrders = async () => {
+      const guestOrders = JSON.parse(localStorage.getItem('guest_orders') || '[]');
+      if (guestOrders.length > 0) {
+        // Update orders that have no user_id
+        for (const orderId of guestOrders) {
+          await supabase
+            .from('orders')
+            .update({ user_id: user.id })
+            .eq('id', orderId)
+            .is('user_id', null);
+        }
+        localStorage.removeItem('guest_orders');
+      }
+      fetchOrders();
     };
-    fetchOrders();
+    linkGuestOrders();
+  }, [user]);
+
+  // Realtime order updates
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel('user-orders')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'orders',
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => { fetchOrders(); }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, [user]);
 
   if (loading) return <Layout><div className="container py-20 text-center font-body">Loading...</div></Layout>;
@@ -50,7 +89,8 @@ const Dashboard = () => {
             <h1 className="font-heading text-2xl md:text-3xl tracking-wider">My Account</h1>
             <p className="text-sm text-muted-foreground font-body mt-1">{user.email}</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
+            <NotificationBell />
             {isAdmin && (
               <Button variant="luxury-outline" size="sm" asChild>
                 <Link to="/admin"><ShieldCheck size={14} /> Admin</Link>
