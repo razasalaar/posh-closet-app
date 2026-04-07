@@ -40,27 +40,30 @@ const NotificationBell = ({ isAdmin = false }: NotificationBellProps) => {
     fetchNotifications();
   }, [user]);
 
-  // Realtime subscription
   useEffect(() => {
-    if (!user) return;
-    const channel = supabase
-      .channel(`notifications-${user.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          setNotifications((prev) => [payload.new as Notification, ...prev]);
-        }
-      )
-      .subscribe();
+  if (!user) return;
 
-    return () => { supabase.removeChannel(channel); };
-  }, [user]);
+  const channel = supabase.channel(`notifications-${user.id}`);
+
+  channel.on(
+    'postgres_changes',
+    {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'notifications',
+      filter: `user_id=eq.${user.id}`,
+    },
+    (payload) => {
+      setNotifications((prev) => [payload.new as Notification, ...prev]);
+    }
+  );
+
+  channel.subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}, [user?.id]);
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
