@@ -44,12 +44,13 @@ const Navbar = () => {
 
   return (
     <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
-      <div className="container flex items-center justify-between h-16">
-        <button className="lg:hidden p-2" onClick={() => setMenuOpen(!menuOpen)} aria-label="Toggle menu">
-          {menuOpen ? <X size={20} /> : <Menu size={20} />}
-        </button>
-
-        <Link to="/" className="font-heading text-xl md:text-2xl tracking-[0.2em] uppercase font-bold">Luxe</Link>
+      <div className="container flex items-center justify-between h-14">
+        <div className="flex items-center gap-1">
+          <button className="lg:hidden p-1.5" onClick={() => setMenuOpen(!menuOpen)} aria-label="Toggle menu">
+            {menuOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
+          <Link to="/" className="font-heading text-lg md:text-2xl tracking-[0.15em] uppercase font-bold">Luxe</Link>
+        </div>
 
         {/* Desktop Nav with click-toggle dropdowns */}
         <nav className="hidden lg:flex items-center gap-8">
@@ -119,14 +120,14 @@ const Navbar = () => {
         </nav>
 
         {/* Icons */}
-        <div className="flex items-center gap-2">
-          <button onClick={() => setSearchOpen(!searchOpen)} className="p-2 hover:text-gold transition-colors" aria-label="Search">
+        <div className="flex items-center gap-0.5">
+          <button onClick={() => setSearchOpen(!searchOpen)} className="p-1.5 hover:text-gold transition-colors" aria-label="Search">
             <Search size={18} />
           </button>
-          <Link to="/wishlist" className="p-2 hover:text-gold transition-colors" aria-label="Wishlist">
-            <Heart size={18} />
+          <Link to={user ? '/dashboard' : '/login'} className="p-1.5 hover:text-gold transition-colors" aria-label="Account">
+            <User size={18} />
           </Link>
-          <Link to="/cart" className="p-2 hover:text-gold transition-colors relative" aria-label="Cart">
+          <Link to="/cart" className="p-1.5 hover:text-gold transition-colors relative" aria-label="Cart">
             <ShoppingBag size={18} />
             {itemCount > 0 && (
               <span className="absolute -top-0.5 -right-0.5 bg-gold text-accent-foreground text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
@@ -135,9 +136,6 @@ const Navbar = () => {
             )}
           </Link>
           {user && <NotificationBell />}
-          <Link to={user ? '/dashboard' : '/login'} className="p-2 hover:text-gold transition-colors" aria-label="Account">
-            <User size={18} />
-          </Link>
         </div>
       </div>
 
