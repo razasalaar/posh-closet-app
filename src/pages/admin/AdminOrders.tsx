@@ -26,47 +26,51 @@ const AdminOrders = () => {
 
   const fetchOrders = useCallback(async () => {
     setLoading(true);
-    let query = supabase
-      .from('orders')
-      .select('*, order_items(*)', { count: 'exact' })
-      .order('created_at', { ascending: false })
-      .range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1);
+    let start: string | null = null;
+    let end: string | null = null;
 
     const now = new Date();
     if (dateFilter === 'today') {
       const todayStart = new Date(now);
       todayStart.setHours(0, 0, 0, 0);
-      query = query.gte('created_at', todayStart.toISOString());
+      start = todayStart.toISOString();
     } else if (dateFilter === 'weekly') {
       const pre7 = new Date(now);
       pre7.setDate(now.getDate() - 7);
       pre7.setHours(0, 0, 0, 0);
-      query = query.gte('created_at', pre7.toISOString());
+      start = pre7.toISOString();
     } else if (dateFilter === 'monthly') {
       const pre30 = new Date(now);
       pre30.setDate(now.getDate() - 30);
       pre30.setHours(0, 0, 0, 0);
-      query = query.gte('created_at', pre30.toISOString());
+      start = pre30.toISOString();
     } else if (dateFilter === 'custom') {
       if (startDate) {
         const sDate = new Date(startDate);
         sDate.setHours(0, 0, 0, 0);
-        query = query.gte('created_at', sDate.toISOString());
+        start = sDate.toISOString();
       }
       if (endDate) {
         const eDate = new Date(endDate);
         eDate.setHours(23, 59, 59, 999);
-        query = query.lte('created_at', eDate.toISOString());
+        end = eDate.toISOString();
       }
     }
 
-    const { data, count, error } = await query;
+    // Using RPC for admin orders is much more reliable as it uses SECURITY DEFINER
+    const { data, error } = await supabase.rpc('admin_get_orders', {
+      p_limit: itemsPerPage,
+      p_offset: (currentPage - 1) * itemsPerPage,
+      p_start_date: start,
+      p_end_date: end
+    });
 
     if (error) {
       console.error('Failed to fetch orders:', error.message);
     } else {
-      setOrders(data || []);
-      setTotalCount(count || 0);
+      const result = data as any;
+      setOrders(result.orders || []);
+      setTotalCount(result.total_count || 0);
     }
     setLoading(false);
   }, [currentPage, dateFilter, startDate, endDate]);
@@ -75,9 +79,11 @@ const AdminOrders = () => {
 
   // Realtime: listen for new/updated orders
   useEffect(() => {
-    supabase.removeAllChannels();
+    // 🛡️ DO NOT use supabase.removeAllChannels() here! 
+    // It would kill the NotificationBell listener in AdminLayout.
+    
     const channel = supabase
-      .channel(`admin-orders-realtime`)
+      .channel(`admin-orders-live`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'orders' },

@@ -130,24 +130,6 @@ const Checkout = () => {
         localStorage.setItem('guest_orders', JSON.stringify(guestOrders));
       }
 
-      // Create admin notifications for new order
-      // Get all admin user_ids
-      const { data: adminRoles } = await supabase
-        .from('user_roles')
-        .select('user_id')
-        .eq('role', 'admin');
-
-      if (adminRoles && adminRoles.length > 0) {
-        const adminNotifs = adminRoles.map((ar) => ({
-          user_id: ar.user_id,
-          type: 'new_order',
-          title: 'New Order Received!',
-          message: `${shipping.firstName} ${shipping.lastName} placed an order of ${formatPrice(grandTotal)}`,
-          order_id: order.id,
-        }));
-        await supabase.from('notifications').insert(adminNotifs);
-      }
-
       clearCart();
       navigate('/order-success');
     } catch {
