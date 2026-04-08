@@ -2,114 +2,107 @@ import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import Layout from '@/components/layout/Layout';
 import ProductCard from '@/components/product/ProductCard';
-import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
-import { ArrowRight } from 'lucide-react';
 import heroBanner from '@/assets/hero-banner.jpg';
 import type { Product } from '@/lib/store';
 
 const Index = () => {
   const [featured, setFeatured] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<{ id: string; name: string; type: string }[]>([]);
 
   useEffect(() => {
-    const fetch = async () => {
-      const { data } = await supabase
-        .from('products')
-        .select('*, categories(name, type)')
-        .eq('is_featured', true)
-        .limit(8);
-      setFeatured((data as any[]) || []);
+    const fetchData = async () => {
+      const [prodRes, catRes] = await Promise.all([
+        supabase.from('products').select('*, categories(name, type)').eq('is_featured', true).limit(8),
+        supabase.from('categories').select('*').order('name'),
+      ]);
+      setFeatured((prodRes.data as any[]) || []);
+      setCategories(catRes.data || []);
     };
-    fetch();
+    fetchData();
   }, []);
+
+  const menCats = categories.filter((c) => c.type === 'men');
+  const womenCats = categories.filter((c) => c.type === 'women');
 
   return (
     <Layout>
-      {/* Hero */}
-      <section className="relative h-[70vh] md:h-[85vh] overflow-hidden">
+      {/* Category Tabs - Outfitters style */}
+      <div className="flex items-center justify-center gap-8 py-3 border-b border-border bg-background">
+        <Link to="/collections/men" className="text-xs tracking-[0.2em] uppercase font-body font-bold hover:text-gold transition-colors">
+          Men
+        </Link>
+        <Link to="/collections/women" className="text-xs tracking-[0.2em] uppercase font-body font-bold hover:text-gold transition-colors">
+          Women
+        </Link>
+      </div>
+
+      {/* Hero - Full screen clean like Outfitters */}
+      <section className="relative h-[85vh] md:h-[90vh] overflow-hidden">
         <img
           src={heroBanner}
-          alt="Luxury Pakistani fashion collection"
-          className="w-full h-full object-cover"
-          width={1600}
-          height={896}
+          alt="Summer collection"
+          className="w-full h-full object-cover object-top"
+          width={1280}
+          height={1600}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-primary/60 via-primary/20 to-transparent" />
-        <div className="absolute inset-0 flex items-end pb-16 md:pb-24">
-          <div className="container">
-            <div className="max-w-lg animate-slide-up">
-              <p className="text-xs tracking-[0.3em] uppercase text-primary-foreground/80 font-body mb-3">
-                New Season 2026
-              </p>
-              <h1 className="font-heading text-4xl md:text-6xl text-primary-foreground font-bold leading-tight mb-6">
-                Elevate Your Style
-              </h1>
-              <div className="flex gap-3">
-                <Button variant="luxury" size="lg" asChild className="bg-background text-foreground hover:bg-gold hover:text-accent-foreground">
-                  <Link to="/collections">Shop Now</Link>
-                </Button>
-              </div>
-            </div>
-          </div>
+        <div className="absolute inset-0 bg-black/10" />
+        <div className="absolute inset-0 flex items-center justify-center">
+          <h1 className="font-heading text-3xl md:text-5xl lg:text-6xl text-white font-bold tracking-wider text-center leading-tight drop-shadow-lg">
+            SUMMER<br />ESSENTIALS
+          </h1>
         </div>
       </section>
 
-      {/* Categories */}
-      <section className="container py-16 md:py-24">
-        <h2 className="font-heading text-2xl md:text-3xl text-center tracking-wider mb-12">
-          Shop By Category
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Link to="/collections/men" className="group relative h-[400px] md:h-[500px] rounded-lg overflow-hidden">
-            <img src="https://images.unsplash.com/photo-1617137968427-85924c800a22?w=800&h=600&fit=crop" alt="Men's collection" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-            <div className="absolute inset-0 bg-primary/30 group-hover:bg-primary/40 transition-colors" />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-center">
-                <h3 className="font-heading text-3xl md:text-4xl text-primary-foreground tracking-wider">Men</h3>
-                <p className="text-xs tracking-widest uppercase text-primary-foreground/80 font-body mt-2 flex items-center gap-2 justify-center">Explore <ArrowRight size={14} /></p>
-              </div>
-            </div>
-          </Link>
-          <Link to="/collections/women" className="group relative h-[400px] md:h-[500px] rounded-lg overflow-hidden">
-            <img src="https://images.unsplash.com/photo-1496747611176-843222e1e57c?w=800&h=600&fit=crop" alt="Women's collection" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-            <div className="absolute inset-0 bg-primary/30 group-hover:bg-primary/40 transition-colors" />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-center">
-                <h3 className="font-heading text-3xl md:text-4xl text-primary-foreground tracking-wider">Women</h3>
-                <p className="text-xs tracking-widest uppercase text-primary-foreground/80 font-body mt-2 flex items-center gap-2 justify-center">Explore <ArrowRight size={14} /></p>
-              </div>
-            </div>
-          </Link>
-        </div>
-      </section>
+      {/* Scrollable Category Cards */}
+      {menCats.length + womenCats.length > 0 && (
+        <section className="py-6">
+          <div className="flex gap-3 overflow-x-auto px-4 pb-2 scrollbar-hide">
+            {[...menCats, ...womenCats].map((cat) => (
+              <Link
+                key={cat.id}
+                to={`/collections/${cat.type}?category=${cat.id}`}
+                className="flex-shrink-0 w-28 md:w-36"
+              >
+                <div className="aspect-square rounded-lg bg-muted overflow-hidden">
+                  <div className="w-full h-full bg-gradient-to-b from-muted to-border flex items-end justify-center pb-3">
+                    <span className="text-[10px] md:text-xs tracking-widest uppercase font-body font-bold text-foreground">
+                      {cat.name}
+                    </span>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Featured Products */}
-      <section className="container pb-16 md:pb-24">
-        <div className="flex items-center justify-between mb-10">
-          <h2 className="font-heading text-2xl md:text-3xl tracking-wider">Featured</h2>
-          <Link to="/collections" className="text-xs tracking-widest uppercase font-body font-medium text-muted-foreground hover:text-gold transition-colors flex items-center gap-1">
-            View All <ArrowRight size={14} />
-          </Link>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-          {featured.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
-        {featured.length === 0 && (
-          <p className="text-center text-muted-foreground font-body py-8">No featured products yet.</p>
-        )}
-      </section>
+      {featured.length > 0 && (
+        <section className="container pb-12 md:pb-20">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="font-heading text-xl md:text-2xl tracking-wider">Featured</h2>
+            <Link to="/collections" className="text-[10px] tracking-widest uppercase font-body font-medium text-muted-foreground hover:text-gold transition-colors">
+              View All →
+            </Link>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5">
+            {featured.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        </section>
+      )}
 
-      {/* Promo Banner */}
+      {/* Minimal Promo */}
       <section className="bg-surface">
-        <div className="container py-16 md:py-24 text-center">
-          <p className="text-xs tracking-[0.3em] uppercase text-gold font-body font-semibold mb-3">Exclusive Offer</p>
-          <h2 className="font-heading text-3xl md:text-5xl tracking-wider mb-4">Free Shipping Nationwide</h2>
-          <p className="text-muted-foreground font-body max-w-md mx-auto mb-8">On all orders above Rs. 10,000. Premium packaging and fast delivery across Pakistan.</p>
-          <Button variant="luxury" size="lg" asChild>
-            <Link to="/collections">Shop Collection</Link>
-          </Button>
+        <div className="container py-12 md:py-20 text-center">
+          <p className="text-[10px] tracking-[0.3em] uppercase text-gold font-body font-semibold mb-2">Exclusive</p>
+          <h2 className="font-heading text-2xl md:text-4xl tracking-wider mb-3">Free Shipping Nationwide</h2>
+          <p className="text-muted-foreground font-body text-sm max-w-md mx-auto mb-6">On all orders above Rs. 10,000</p>
+          <Link to="/collections" className="inline-block bg-foreground text-background px-8 py-3 text-xs tracking-widest uppercase font-body font-bold hover:bg-gold hover:text-accent-foreground transition-colors">
+            Shop Now
+          </Link>
         </div>
       </section>
     </Layout>
