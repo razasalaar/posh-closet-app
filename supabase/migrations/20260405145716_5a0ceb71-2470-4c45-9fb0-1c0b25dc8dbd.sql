@@ -171,7 +171,7 @@ CREATE TABLE public.order_items (
 ALTER TABLE public.order_items ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can view own order items" ON public.order_items FOR SELECT
-  USING (EXISTS (SELECT 1 FROM public.orders WHERE orders.id = order_items.order_id AND orders.user_id = auth.uid()));
+  USING (order_id IN (SELECT id FROM public.orders WHERE user_id = auth.uid()));
 CREATE POLICY "Admins can view all order items" ON public.order_items FOR SELECT USING (public.has_role(auth.uid(), 'admin'));
 CREATE POLICY "Authenticated users can create order items" ON public.order_items FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
 

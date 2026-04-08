@@ -116,6 +116,7 @@ const Checkout = () => {
         order_id: order.id,
         product_id: item.product.id,
         product_name: item.product.name,
+        product_brand: item.product.brand || 'LUXE',
         product_price: item.product.price,
         product_image: item.product.image_url,
         quantity: item.quantity,

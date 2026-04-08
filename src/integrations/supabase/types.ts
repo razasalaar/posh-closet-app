@@ -81,6 +81,7 @@ export type Database = {
           created_at: string
           id: string
           order_id: string
+          product_brand: string | null
           product_id: string | null
           product_image: string | null
           product_name: string
@@ -92,6 +93,7 @@ export type Database = {
           created_at?: string
           id?: string
           order_id: string
+          product_brand?: string | null
           product_id?: string | null
           product_image?: string | null
           product_name: string
@@ -102,7 +104,8 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
-          order_id?: string
+          order_id: string
+          product_brand?: string | null
           product_id?: string | null
           product_image?: string | null
           product_name?: string
