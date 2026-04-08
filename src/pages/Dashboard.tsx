@@ -97,7 +97,6 @@ const Dashboard = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <NotificationBell />
             {isAdmin && (
               <Button variant="outline" size="sm" asChild className="h-10 px-4 border-gold/30 text-gold hover:bg-gold/5">
                 <Link to="/admin" className="flex items-center gap-2"><ShieldCheck size={16} /> Admin Panel</Link>
