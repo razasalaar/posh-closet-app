@@ -348,6 +348,10 @@ export type Database = {
         }
         Returns: Json
       }
+      get_my_orders: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

@@ -24,16 +24,12 @@ const Dashboard = () => {
 
   const fetchOrders = useCallback(async () => {
     if (!user) return;
-    const { data, error } = await supabase
-      .from('orders')
-      .select('*, order_items(*)')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
+    const { data, error } = await supabase.rpc('get_my_orders');
     
     if (error) {
       console.error('Error fetching orders:', error.message);
     } else {
-      setOrders(data || []);
+      setOrders((data as unknown as any[]) || []);
     }
     setLoadingOrders(false);
   }, [user]);
