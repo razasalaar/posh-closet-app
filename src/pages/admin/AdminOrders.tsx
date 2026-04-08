@@ -26,50 +26,47 @@ const AdminOrders = () => {
 
   const fetchOrders = useCallback(async () => {
     setLoading(true);
-    let start: string | null = null;
-    let end: string | null = null;
+    let query = supabase
+      .from('orders')
+      .select('*, order_items(*)', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1);
 
     const now = new Date();
     if (dateFilter === 'today') {
       const todayStart = new Date(now);
       todayStart.setHours(0, 0, 0, 0);
-      start = todayStart.toISOString();
+      query = query.gte('created_at', todayStart.toISOString());
     } else if (dateFilter === 'weekly') {
-      const pre7Days = new Date(now);
-      pre7Days.setDate(now.getDate() - 7);
-      pre7Days.setHours(0, 0, 0, 0);
-      start = pre7Days.toISOString();
+      const pre7 = new Date(now);
+      pre7.setDate(now.getDate() - 7);
+      pre7.setHours(0, 0, 0, 0);
+      query = query.gte('created_at', pre7.toISOString());
     } else if (dateFilter === 'monthly') {
-      const pre30Days = new Date(now);
-      pre30Days.setDate(now.getDate() - 30);
-      pre30Days.setHours(0, 0, 0, 0);
-      start = pre30Days.toISOString();
+      const pre30 = new Date(now);
+      pre30.setDate(now.getDate() - 30);
+      pre30.setHours(0, 0, 0, 0);
+      query = query.gte('created_at', pre30.toISOString());
     } else if (dateFilter === 'custom') {
       if (startDate) {
         const sDate = new Date(startDate);
         sDate.setHours(0, 0, 0, 0);
-        start = sDate.toISOString();
+        query = query.gte('created_at', sDate.toISOString());
       }
       if (endDate) {
         const eDate = new Date(endDate);
         eDate.setHours(23, 59, 59, 999);
-        end = eDate.toISOString();
+        query = query.lte('created_at', eDate.toISOString());
       }
     }
 
-    const { data, error } = await supabase.rpc('admin_get_orders', {
-      p_limit: itemsPerPage,
-      p_offset: (currentPage - 1) * itemsPerPage,
-      p_start_date: start,
-      p_end_date: end
-    });
+    const { data, count, error } = await query;
 
     if (error) {
       console.error('Failed to fetch orders:', error.message);
     } else {
-      const result = data as any;
-      setOrders(result.orders || []);
-      setTotalCount(result.total_count || 0);
+      setOrders(data || []);
+      setTotalCount(count || 0);
     }
     setLoading(false);
   }, [currentPage, dateFilter, startDate, endDate]);
