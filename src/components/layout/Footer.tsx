@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import logoFull from '@/assets/logo-full.png';
 
 const Footer = () => {
   return (
@@ -6,7 +7,7 @@ const Footer = () => {
       <div className="container py-16">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
           <div>
-            <h3 className="font-heading text-xl tracking-[0.2em] uppercase mb-4">Luxe</h3>
+            <img src={logoFull} alt="Mansa Mussa" className="h-16 w-auto mb-4 brightness-0 invert" />
             <p className="text-sm text-primary-foreground/70 font-body leading-relaxed">
               Premium Pakistani fashion for the modern individual. Crafted with care, designed with passion.
             </p>

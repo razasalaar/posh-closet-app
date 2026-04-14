@@ -57,13 +57,16 @@ const AdminOrders = () => {
       }
     }
 
-    // Using RPC for admin orders is much more reliable as it uses SECURITY DEFINER
-    const { data, error } = await supabase.rpc('admin_get_orders', {
-      p_limit: itemsPerPage,
-      p_offset: (currentPage - 1) * itemsPerPage,
-      p_start_date: start,
-      p_end_date: end
-    });
+    let query = supabase
+      .from('orders')
+      .select('*, order_items(*)')
+      .order('created_at', { ascending: false })
+      .range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1);
+
+    if (start) query = query.gte('created_at', start);
+    if (end) query = query.lte('created_at', end);
+
+    const { data, error } = await query;
 
     if (error) {
       console.error('Failed to fetch orders:', error.message);
