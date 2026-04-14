@@ -81,7 +81,6 @@ export type Database = {
           created_at: string
           id: string
           order_id: string
-          product_brand: string | null
           product_id: string | null
           product_image: string | null
           product_name: string
@@ -93,7 +92,6 @@ export type Database = {
           created_at?: string
           id?: string
           order_id: string
-          product_brand?: string | null
           product_id?: string | null
           product_image?: string | null
           product_name: string
@@ -104,8 +102,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
-          order_id: string
-          product_brand?: string | null
+          order_id?: string
           product_id?: string | null
           product_image?: string | null
           product_name?: string
@@ -331,27 +328,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      admin_delete_category: {
-        Args: { p_category_id: string }
-        Returns: undefined
-      }
-      admin_delete_product: {
-        Args: { p_product_id: string }
-        Returns: undefined
-      }
-      admin_get_orders: {
-        Args: {
-          p_limit?: number
-          p_offset?: number
-          p_start_date?: string
-          p_end_date?: string
-        }
-        Returns: Json
-      }
-      get_my_orders: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
