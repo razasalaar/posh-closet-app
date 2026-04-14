@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import logoIcon from '@/assets/logo-icon.png';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,8 +34,9 @@ const Login = () => {
     <Layout>
       <div className="container max-w-md py-16 md:py-24">
         <div className="text-center mb-8">
+          <img src={logoIcon} alt="Mansa Mussa" className="h-16 w-auto mx-auto mb-4" />
           <h1 className="font-heading text-3xl tracking-wider mb-2">Welcome Back</h1>
-          <p className="text-sm text-muted-foreground font-body">Sign in to your LUXE account</p>
+          <p className="text-sm text-muted-foreground font-body">Sign in to your Mansa Mussa account</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
