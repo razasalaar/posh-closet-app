@@ -7,11 +7,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { formatPrice } from '@/lib/data';
 import { CheckCircle, Truck, Package, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Calendar, Filter } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
+import { useAuth } from '@/hooks/useAuth';
 
 type OrderStatus = Database['public']['Enums']['order_status'];
 type DateFilter = 'all' | 'today' | 'weekly' | 'monthly' | 'custom';
 
 const AdminOrders = () => {
+  const { loading: authLoading, isAdmin } = useAuth();
   const [orders, setOrders] = useState<any[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
@@ -25,6 +27,8 @@ const AdminOrders = () => {
   const [endDate, setEndDate] = useState('');
 
   const fetchOrders = useCallback(async () => {
+    if (authLoading || !isAdmin) return;
+
     setLoading(true);
     let start: string | null = null;
     let end: string | null = null;
@@ -59,34 +63,41 @@ const AdminOrders = () => {
 
     let query = supabase
       .from('orders')
-      .select('*, order_items(*)')
+      .select('*, order_items(*)', { count: 'exact' })
       .order('created_at', { ascending: false })
       .range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1);
 
     if (start) query = query.gte('created_at', start);
     if (end) query = query.lte('created_at', end);
 
-    const { data, error } = await query;
+    const { data, error, count } = await query;
 
     if (error) {
       console.error('Failed to fetch orders:', error.message);
+      setOrders([]);
+      setTotalCount(0);
     } else {
-      const result = data as any;
-      setOrders(result.orders || []);
-      setTotalCount(result.total_count || 0);
+      setOrders(data ?? []);
+      setTotalCount(count ?? 0);
     }
-    setLoading(false);
-  }, [currentPage, dateFilter, startDate, endDate]);
 
-  useEffect(() => { fetchOrders(); }, [fetchOrders]);
+    setLoading(false);
+  }, [authLoading, isAdmin, currentPage, dateFilter, startDate, endDate]);
+
+  useEffect(() => {
+    if (!authLoading && isAdmin) {
+      fetchOrders();
+    }
+  }, [authLoading, isAdmin, fetchOrders]);
 
   // Realtime: listen for new/updated orders
   useEffect(() => {
-    // 🛡️ DO NOT use supabase.removeAllChannels() here! 
+    if (authLoading || !isAdmin) return;
+
+    // 🛡️ DO NOT use supabase.removeAllChannels() here!
     // It would kill the NotificationBell listener in AdminLayout.
-    
     const channel = supabase
-      .channel(`admin-orders-live`)
+      .channel('admin-orders-live')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'orders' },
@@ -97,7 +108,7 @@ const AdminOrders = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [fetchOrders]);
+  }, [authLoading, isAdmin, fetchOrders]);
 
   const updateStatus = async (order: any, status: OrderStatus) => {
     await supabase.from('orders').update({ status }).eq('id', order.id);
