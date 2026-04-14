@@ -6,20 +6,35 @@ import { supabase } from '@/integrations/supabase/client';
 import heroBanner from '@/assets/hero-banner.jpg';
 import type { Product } from '@/lib/store';
 import { ImageOff } from 'lucide-react';
+import { usePageSeo } from '@/hooks/usePageSeo';
+
+interface CategoryWithImage {
+  id: string;
+  name: string;
+  type: 'men' | 'women';
+  representative_image: string | null;
+}
 
 const Index = () => {
   const [featured, setFeatured] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
+  const [categories, setCategories] = useState<CategoryWithImage[]>([]);
+
+  usePageSeo({
+    title: "Mansa Mussa | Premium Men & Women Clothing Pakistan",
+    description:
+      "Shop premium men and women clothing in Pakistan at Mansa Mussa. Discover minimalist luxury shirts, trousers, lawn and suits with nationwide delivery.",
+    path: "/",
+  });
 
   useEffect(() => {
     const fetchData = async () => {
       const [prodRes, catRes] = await Promise.all([
         supabase.from('products').select('*, categories(name, type)').eq('is_featured', true).limit(8),
         // Fetch from the new view that includes representative images
-        supabase.from('categories_with_images' as any).select('*').order('name'),
+        supabase.from('categories_with_images' as never).select('*').order('name'),
       ]);
-      setFeatured((prodRes.data as any[]) || []);
-      setCategories(catRes.data || []);
+      setFeatured((prodRes.data ?? []) as Product[]);
+      setCategories((catRes.data ?? []) as CategoryWithImage[]);
     };
     fetchData();
   }, []);
@@ -114,6 +129,17 @@ const Index = () => {
           </div>
         </section>
       )}
+
+      <section className="container pb-12 md:pb-16">
+        <h2 className="font-heading text-xl md:text-2xl tracking-wider uppercase mb-4">
+          Online Clothing Store Pakistan
+        </h2>
+        <p className="text-sm md:text-base text-muted-foreground font-body leading-relaxed max-w-3xl">
+          Mansa Mussa is a premium online clothing store in Pakistan for men and women who prefer
+          modern, minimal, and luxury style. Explore men shirts, trousers, pants, suits, shalwar
+          kameez, and women lawn, linen, dresses, and suits designed for Pakistani seasons.
+        </p>
+      </section>
 
       {/* Minimal Promo */}
       <section className="bg-surface relative overflow-hidden">

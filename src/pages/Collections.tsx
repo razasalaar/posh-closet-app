@@ -5,6 +5,13 @@ import ProductCard from '@/components/product/ProductCard';
 import { supabase } from '@/integrations/supabase/client';
 import { SlidersHorizontal, X } from 'lucide-react';
 import type { Product } from '@/lib/store';
+import { usePageSeo } from '@/hooks/usePageSeo';
+
+interface CategoryItem {
+  id: string;
+  name: string;
+  type: 'men' | 'women';
+}
 
 const Collections = () => {
   const { type } = useParams<{ type?: string }>();
@@ -12,7 +19,7 @@ const Collections = () => {
   const categoryParam = searchParams.get('category');
 
   const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
+  const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>(categoryParam || 'all');
   const [sortBy, setSortBy] = useState<string>('default');
   const [showFilters, setShowFilters] = useState(false);
@@ -31,13 +38,14 @@ const Collections = () => {
         catQuery = catQuery.eq('type', type);
       }
       const { data: catData } = await catQuery;
-      setCategories(catData || []);
+      const resolvedCategories = (catData ?? []) as CategoryItem[];
+      setCategories(resolvedCategories);
 
       // Fetch products with category join
       let prodQuery = supabase.from('products').select('*, categories(name, type)');
       if (type === 'men' || type === 'women') {
         // Filter by category type via inner join
-        const catIds = (catData || []).map((c: any) => c.id);
+        const catIds = resolvedCategories.map((c) => c.id);
         if (catIds.length > 0) {
           prodQuery = prodQuery.in('category_id', catIds);
         } else {
@@ -50,14 +58,14 @@ const Collections = () => {
         prodQuery = prodQuery.eq('category_id', selectedCategory);
       }
       const { data: prodData } = await prodQuery;
-      setProducts((prodData as any[]) || []);
+      setProducts((prodData ?? []) as Product[]);
       setLoading(false);
     };
     fetchData();
   }, [type, selectedCategory]);
 
   const sortedProducts = useMemo(() => {
-    let result = [...products];
+    const result = [...products];
     if (sortBy === 'price-low') result.sort((a, b) => a.price - b.price);
     if (sortBy === 'price-high') result.sort((a, b) => b.price - a.price);
     if (sortBy === 'rating') result.sort((a, b) => (b.rating || 0) - (a.rating || 0));
@@ -65,11 +73,46 @@ const Collections = () => {
   }, [products, sortBy]);
 
   const title = type === 'men' ? "Men's Collection" : type === 'women' ? "Women's Collection" : 'All Collections';
+  const selectedCategoryName = categories.find((cat) => cat.id === selectedCategory)?.name;
+
+  const seoMeta = useMemo(() => {
+    if (type === "men") {
+      return {
+        title: "Men Collection | Premium Shirts, Trousers & Suits Pakistan",
+        description:
+          "Explore premium men clothing in Pakistan including shirts, trousers, pants and suits from Mansa Mussa with modern minimalist design.",
+        path: "/collections/men",
+      };
+    }
+
+    if (type === "women") {
+      return {
+        title: "Women Collection | Lawn, Linen & Dresses Online Pakistan",
+        description:
+          "Shop women's premium lawn, linen, dresses and suits online in Pakistan at Mansa Mussa. Elegant minimalist styles for every season.",
+        path: "/collections/women",
+      };
+    }
+
+    return {
+      title: "Premium Clothing Collections Online Pakistan | Mansa Mussa",
+      description:
+        "Browse premium men and women clothing collections in Pakistan. Shop shirts, trousers, lawn and suits online at Mansa Mussa.",
+      path: "/collections",
+    };
+  }, [type]);
+
+  usePageSeo(seoMeta);
 
   return (
     <Layout>
       <div className="container py-8 md:py-12">
         <h1 className="font-heading text-3xl md:text-4xl tracking-wider text-center mb-8">{title}</h1>
+        <h2 className="sr-only">
+          {selectedCategoryName
+            ? `Buy ${selectedCategoryName} Online in Pakistan`
+            : "Shop premium fashion categories in Pakistan"}
+        </h2>
 
         {/* Desktop filters */}
         <div className="hidden md:flex items-center justify-between mb-8 pb-4 border-b border-border">
@@ -92,6 +135,8 @@ const Collections = () => {
             ))}
           </div>
           <select
+            aria-label="Sort products"
+            title="Sort products"
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
             className="text-xs tracking-wider uppercase font-body bg-surface border border-border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gold"
@@ -119,6 +164,20 @@ const Collections = () => {
             )}
           </>
         )}
+
+        <section className="mt-12 md:mt-16 border-t border-border pt-8">
+          <h2 className="font-heading text-xl tracking-wider uppercase mb-3">Shop by Category</h2>
+          <p className="text-sm text-muted-foreground font-body leading-relaxed mb-4">
+            Discover premium essentials including men shirts, trousers, suits, and women lawn, linen,
+            dresses and suits made for modern Pakistani wardrobes.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <span className="text-xs uppercase tracking-wider bg-surface px-3 py-1 rounded-full">Shirts</span>
+            <span className="text-xs uppercase tracking-wider bg-surface px-3 py-1 rounded-full">Trousers</span>
+            <span className="text-xs uppercase tracking-wider bg-surface px-3 py-1 rounded-full">Lawn</span>
+            <span className="text-xs uppercase tracking-wider bg-surface px-3 py-1 rounded-full">Suits</span>
+          </div>
+        </section>
       </div>
 
       {/* Mobile filter button */}
@@ -136,7 +195,7 @@ const Collections = () => {
           <div className="absolute bottom-0 left-0 right-0 bg-background rounded-t-2xl p-6 animate-slide-up" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-6">
               <h3 className="font-heading text-lg">Filter & Sort</h3>
-              <button onClick={() => setShowFilters(false)}><X size={20} /></button>
+              <button aria-label="Close filters" title="Close filters" onClick={() => setShowFilters(false)}><X size={20} /></button>
             </div>
             <div className="space-y-4 mb-6">
               <p className="text-xs tracking-widest uppercase font-body text-muted-foreground">Category</p>
@@ -161,6 +220,8 @@ const Collections = () => {
             <div className="space-y-4 mb-8">
               <p className="text-xs tracking-widest uppercase font-body text-muted-foreground">Sort By</p>
               <select
+                aria-label="Sort products on mobile"
+                title="Sort products on mobile"
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
                 className="w-full text-sm font-body bg-surface border border-border rounded-lg px-3 py-3 focus:outline-none focus:ring-2 focus:ring-gold"

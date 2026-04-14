@@ -50,13 +50,14 @@ const Navbar = () => {
           <button className="lg:hidden p-1.5" onClick={() => setMenuOpen(!menuOpen)} aria-label="Toggle menu">
             {menuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
-          <Link to="/" className="flex items-center">
-            <img src={logoIcon} alt="Mansa Mussa" className="h-14 md:h-16 w-auto" />
+          <Link to="/" className="flex items-center gap-0">
+            <img src={logoIcon} alt="Mansa Mussa" className="h-24 md:h-26 w-auto" />
+            <h1 className='text-yellow-600 text-lg -ml-12 md:text-2xl '>MANSA MUSSA</h1>
           </Link>
         </div>
 
         {/* Desktop Nav with click-toggle dropdowns */}
-        <nav className="hidden lg:flex items-center gap-8">
+        <nav className="hidden lg:flex items-center gap-8 -ml-16">
           <div
             className="relative"
             onMouseEnter={() => handleDropdownEnter('men')}

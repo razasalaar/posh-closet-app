@@ -6,6 +6,7 @@ import { formatPrice } from '@/lib/data';
 import { useCart, useWishlist, Product } from '@/lib/store';
 import { supabase } from '@/integrations/supabase/client';
 import { Star, ShoppingBag, Heart, Shield, Truck, Minus, Plus, ChevronLeft, ChevronRight, Eye, Zap, XCircle } from 'lucide-react';
+import { usePageSeo } from '@/hooks/usePageSeo';
 
 interface SizeInfo {
   size_label: string;
@@ -30,6 +31,20 @@ const ProductDetail = () => {
   const buyNow = useCart((s) => s.buyNow);
   const toggleWishlist = useWishlist((s) => s.toggleWishlist);
   const isInWishlist = useWishlist((s) => (product ? s.isInWishlist(product.id) : false));
+  const allImages = [product?.image_url, ...(product?.images || [])].filter(Boolean) as string[];
+  const displayImages = allImages.length > 0 ? [...new Set(allImages)] : ['/placeholder.svg'];
+  const productType = product?.categories?.name || "premium clothing";
+
+  usePageSeo({
+    title: product
+      ? `${product.name} - ${productType} | Mansa Mussa Pakistan`
+      : "Premium Clothing Product | Mansa Mussa Pakistan",
+    description: product
+      ? `Buy ${product.name} online in Pakistan. Premium ${productType.toLowerCase()} with modern minimalist style, luxury comfort, and nationwide delivery by Mansa Mussa.`
+      : "Shop premium men and women clothing online in Pakistan at Mansa Mussa.",
+    path: product ? `/product/${product.id}` : "/collections",
+    image: displayImages[0],
+  });
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -70,9 +85,6 @@ const ProductDetail = () => {
       </Layout>
     );
   }
-
-  const allImages = [product.image_url, ...(product.images || [])].filter(Boolean) as string[];
-  const displayImages = allImages.length > 0 ? [...new Set(allImages)] : ['/placeholder.svg'];
 
   const nextImage = () => setCurrentImage((prev) => (prev + 1) % displayImages.length);
   const prevImage = () => setCurrentImage((prev) => (prev - 1 + displayImages.length) % displayImages.length);
@@ -123,10 +135,10 @@ const ProductDetail = () => {
               <img src={displayImages[currentImage]} alt={product.name} className="w-full h-full object-cover" />
               {displayImages.length > 1 && (
                 <>
-                  <button onClick={prevImage} className="absolute left-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-background/80 backdrop-blur-sm hover:bg-background">
+                  <button aria-label="Previous product image" title="Previous product image" onClick={prevImage} className="absolute left-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-background/80 backdrop-blur-sm hover:bg-background">
                     <ChevronLeft size={18} />
                   </button>
-                  <button onClick={nextImage} className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-background/80 backdrop-blur-sm hover:bg-background">
+                  <button aria-label="Next product image" title="Next product image" onClick={nextImage} className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-background/80 backdrop-blur-sm hover:bg-background">
                     <ChevronRight size={18} />
                   </button>
                 </>
@@ -139,7 +151,7 @@ const ProductDetail = () => {
                   onClick={() => setCurrentImage(i)}
                   className={`w-16 h-20 rounded-md overflow-hidden border-2 transition-colors ${i === currentImage ? 'border-gold' : 'border-transparent'}`}
                 >
-                  <img src={img} alt="" className="w-full h-full object-cover" />
+                  <img src={img} alt={`${product.name} view ${i + 1}`} className="w-full h-full object-cover" />
                 </button>
               ))}
             </div>
@@ -229,11 +241,11 @@ const ProductDetail = () => {
             <div className="space-y-2">
               <p className="text-xs tracking-widest uppercase font-body text-muted-foreground">Quantity</p>
               <div className="flex items-center border border-border rounded-lg w-fit">
-                <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="p-3 hover:bg-surface transition-colors">
+                <button aria-label="Decrease quantity" title="Decrease quantity" onClick={() => setQuantity(Math.max(1, quantity - 1))} className="p-3 hover:bg-surface transition-colors">
                   <Minus size={14} />
                 </button>
                 <span className="px-5 py-3 font-body text-sm font-medium min-w-[3rem] text-center">{quantity}</span>
-                <button onClick={() => setQuantity(quantity + 1)} className="p-3 hover:bg-surface transition-colors">
+                <button aria-label="Increase quantity" title="Increase quantity" onClick={() => setQuantity(quantity + 1)} className="p-3 hover:bg-surface transition-colors">
                   <Plus size={14} />
                 </button>
               </div>
@@ -256,8 +268,17 @@ const ProductDetail = () => {
 
             {/* Description */}
             <div className="pt-6 border-t border-border">
-              <h3 className="text-xs tracking-widest uppercase font-body font-semibold mb-3">Description</h3>
+              <h2 className="text-xs tracking-widest uppercase font-body font-semibold mb-3">Product Details</h2>
               <p className="text-sm font-body text-muted-foreground leading-relaxed">{product.description}</p>
+            </div>
+
+            <div className="pt-2">
+              <h3 className="text-xs tracking-widest uppercase font-body font-semibold mb-2">Shop More</h3>
+              <div className="flex flex-wrap gap-3 text-xs font-body">
+                <Link to="/collections/men" className="underline underline-offset-4 hover:text-gold">Men Collection</Link>
+                <Link to="/collections/women" className="underline underline-offset-4 hover:text-gold">Women Collection</Link>
+                <Link to="/collections" className="underline underline-offset-4 hover:text-gold">All Collections</Link>
+              </div>
             </div>
           </div>
         </div>
