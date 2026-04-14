@@ -52,7 +52,7 @@ const Navbar = () => {
           </button>
           <Link to="/" className="flex items-center gap-0">
             <img src={logoIcon} alt="Mansa Mussa" className="h-24 md:h-26 w-auto" />
-            <h1 className='text-yellow-600 text-lg -ml-12 md:text-2xl '>MANSA MUSSA</h1>
+            <h1 className='text-yellow-600 text-md -ml-12 md:text-2xl '>MANSA MUSSA</h1>
           </Link>
         </div>
 
