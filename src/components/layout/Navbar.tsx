@@ -5,6 +5,7 @@ import { useCart } from '@/lib/store';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import NotificationBell from '@/components/notifications/NotificationBell';
+import logoIcon from '@/assets/logo-icon.png';
 
 interface Category {
   id: string;
@@ -49,7 +50,9 @@ const Navbar = () => {
           <button className="lg:hidden p-1.5" onClick={() => setMenuOpen(!menuOpen)} aria-label="Toggle menu">
             {menuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
-          <Link to="/" className="font-heading text-lg md:text-2xl tracking-[0.15em] uppercase font-bold">Luxe</Link>
+          <Link to="/" className="flex items-center">
+            <img src={logoIcon} alt="Mansa Mussa" className="h-8 md:h-10 w-auto" />
+          </Link>
         </div>
 
         {/* Desktop Nav with click-toggle dropdowns */}
