@@ -31,7 +31,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
             <Link to="/" className="text-xs text-muted-foreground font-body flex items-center gap-1 hover:text-foreground">
               <ArrowLeft size={14} /> Store
             </Link>
-            <span className="font-heading text-lg tracking-wider">LUXE Admin</span>
+            <span className="font-heading text-lg tracking-wider">Mansa Mussa Admin</span>
           </div>
           <div className="flex items-center gap-2">
             <nav className="flex gap-1">

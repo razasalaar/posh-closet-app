@@ -51,7 +51,7 @@ const Navbar = () => {
             {menuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
           <Link to="/" className="flex items-center">
-            <img src={logoIcon} alt="Mansa Mussa" className="h-8 md:h-10 w-auto" />
+            <img src={logoIcon} alt="Mansa Mussa" className="h-14 md:h-16 w-auto" />
           </Link>
         </div>
 

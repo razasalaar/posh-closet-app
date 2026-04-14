@@ -7,7 +7,7 @@ const Footer = () => {
       <div className="container py-16">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
           <div>
-            <img src={logoFull} alt="Mansa Mussa" className="h-16 w-auto mb-4 brightness-0 invert" />
+            <img src={logoFull} alt="Mansa Mussa" className="h-28 w-auto mb-4" />
             <p className="text-sm text-primary-foreground/70 font-body leading-relaxed">
               Premium Pakistani fashion for the modern individual. Crafted with care, designed with passion.
             </p>
@@ -39,7 +39,7 @@ const Footer = () => {
         </div>
         <div className="border-t border-primary-foreground/20 mt-12 pt-8 text-center">
           <p className="text-xs text-primary-foreground/50 font-body tracking-wider">
-            © 2026 LUXE. All rights reserved.
+            © 2026 MANSA MUSSA. All rights reserved.
           </p>
         </div>
       </div>
