@@ -1,5 +1,5 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { formatPrice } from '@/lib/data';
@@ -7,6 +7,8 @@ import { useCart, useWishlist, Product } from '@/lib/store';
 import { supabase } from '@/integrations/supabase/client';
 import { Star, ShoppingBag, Heart, Shield, Truck, Minus, Plus, ChevronLeft, ChevronRight, Eye, Zap, XCircle } from 'lucide-react';
 import { usePageSeo } from '@/hooks/usePageSeo';
+import ReviewForm from '@/components/product/ReviewForm';
+import ReviewList from '@/components/product/ReviewList';
 
 interface SizeInfo {
   size_label: string;
