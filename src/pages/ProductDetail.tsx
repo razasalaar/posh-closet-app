@@ -203,14 +203,16 @@ const ProductDetail = () => {
 
             <p className="text-2xl font-body font-bold">{formatPrice(product.price)}</p>
 
-            {/* Rating */}
+            {/* Rating - dynamic */}
             <div className="flex items-center gap-2">
               <div className="flex">
                 {[...Array(5)].map((_, i) => (
-                  <Star key={i} size={14} className={i < Math.floor(product.rating || 0) ? 'fill-gold text-gold' : 'text-border'} />
+                  <Star key={i} size={14} className={i < Math.round(averageRating) ? 'fill-gold text-gold' : 'text-border'} />
                 ))}
               </div>
-              <span className="text-sm font-body text-muted-foreground">({product.reviews || 0} reviews)</span>
+              <span className="text-sm font-body text-muted-foreground">
+                {averageRating > 0 ? averageRating.toFixed(1) : 'No ratings'} ({totalReviews} review{totalReviews !== 1 ? 's' : ''})
+              </span>
             </div>
 
             {/* Live viewers */}
