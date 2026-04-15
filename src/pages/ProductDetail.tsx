@@ -28,6 +28,10 @@ const ProductDetail = () => {
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [sizeError, setSizeError] = useState(false);
   const [viewerCount] = useState(() => Math.floor(Math.random() * 500) + 800);
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
+  const [averageRating, setAverageRating] = useState(0);
+  const [totalReviews, setTotalReviews] = useState(0);
   const navigate = useNavigate();
   const addToCart = useCart((s) => s.addToCart);
   const buyNow = useCart((s) => s.buyNow);
