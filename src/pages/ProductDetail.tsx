@@ -321,6 +321,15 @@ const ProductDetail = () => {
             </div>
           </div>
         </div>
+
+        {/* Reviews Section */}
+        <div className="mt-12 border-t border-border pt-8 space-y-8">
+          <h2 className="font-heading text-xl md:text-2xl tracking-wider">Customer Reviews</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <ReviewList reviews={reviews} loading={reviewsLoading} averageRating={averageRating} totalReviews={totalReviews} />
+            <ReviewForm productId={product.id} onReviewSubmitted={fetchReviews} />
+          </div>
+        </div>
       </div>
 
       {/* Mobile sticky add to cart */}
