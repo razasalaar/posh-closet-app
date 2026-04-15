@@ -19,6 +19,7 @@ interface CategoryWithImage {
 const Index = () => {
   const [featured, setFeatured] = useState<Product[]>([]);
   const [categories, setCategories] = useState<CategoryWithImage[]>([]);
+  const [loading, setLoading] = useState(true);
 
   usePageSeo({
     title: "Mansa Mussa | Premium Men & Women Clothing Pakistan",
