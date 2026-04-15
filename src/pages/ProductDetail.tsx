@@ -1,5 +1,5 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { formatPrice } from '@/lib/data';
@@ -7,6 +7,8 @@ import { useCart, useWishlist, Product } from '@/lib/store';
 import { supabase } from '@/integrations/supabase/client';
 import { Star, ShoppingBag, Heart, Shield, Truck, Minus, Plus, ChevronLeft, ChevronRight, Eye, Zap, XCircle } from 'lucide-react';
 import { usePageSeo } from '@/hooks/usePageSeo';
+import ReviewForm from '@/components/product/ReviewForm';
+import ReviewList from '@/components/product/ReviewList';
 
 interface SizeInfo {
   size_label: string;
@@ -26,6 +28,10 @@ const ProductDetail = () => {
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [sizeError, setSizeError] = useState(false);
   const [viewerCount] = useState(() => Math.floor(Math.random() * 500) + 800);
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
+  const [averageRating, setAverageRating] = useState(0);
+  const [totalReviews, setTotalReviews] = useState(0);
   const navigate = useNavigate();
   const addToCart = useCart((s) => s.addToCart);
   const buyNow = useCart((s) => s.buyNow);
@@ -70,6 +76,37 @@ const ProductDetail = () => {
     };
     if (id) fetchProduct();
   }, [id]);
+
+  const fetchReviews = useCallback(async () => {
+    if (!id) return;
+    setReviewsLoading(true);
+    const { data } = await supabase
+      .from('reviews')
+      .select('*')
+      .eq('product_id', id)
+      .order('created_at', { ascending: false });
+    const revs = data || [];
+    setReviews(revs);
+    setTotalReviews(revs.length);
+    setAverageRating(revs.length > 0 ? revs.reduce((sum: number, r: any) => sum + r.rating, 0) / revs.length : 0);
+    setReviewsLoading(false);
+  }, [id]);
+
+  useEffect(() => {
+    fetchReviews();
+  }, [fetchReviews]);
+
+  // Realtime reviews
+  useEffect(() => {
+    if (!id) return;
+    const channel = supabase
+      .channel(`reviews-${id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'reviews', filter: `product_id=eq.${id}` }, () => {
+        fetchReviews();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [id, fetchReviews]);
 
   if (loading) {
     return <Layout><div className="container py-20 text-center font-body">Loading...</div></Layout>;
@@ -166,14 +203,16 @@ const ProductDetail = () => {
 
             <p className="text-2xl font-body font-bold">{formatPrice(product.price)}</p>
 
-            {/* Rating */}
+            {/* Rating - dynamic */}
             <div className="flex items-center gap-2">
               <div className="flex">
                 {[...Array(5)].map((_, i) => (
-                  <Star key={i} size={14} className={i < Math.floor(product.rating || 0) ? 'fill-gold text-gold' : 'text-border'} />
+                  <Star key={i} size={14} className={i < Math.round(averageRating) ? 'fill-gold text-gold' : 'text-border'} />
                 ))}
               </div>
-              <span className="text-sm font-body text-muted-foreground">({product.reviews || 0} reviews)</span>
+              <span className="text-sm font-body text-muted-foreground">
+                {averageRating > 0 ? averageRating.toFixed(1) : 'No ratings'} ({totalReviews} review{totalReviews !== 1 ? 's' : ''})
+              </span>
             </div>
 
             {/* Live viewers */}
@@ -280,6 +319,15 @@ const ProductDetail = () => {
                 <Link to="/collections" className="underline underline-offset-4 hover:text-gold">All Collections</Link>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Reviews Section */}
+        <div className="mt-12 border-t border-border pt-8 space-y-8">
+          <h2 className="font-heading text-xl md:text-2xl tracking-wider">Customer Reviews</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <ReviewList reviews={reviews} loading={reviewsLoading} averageRating={averageRating} totalReviews={totalReviews} />
+            <ReviewForm productId={product.id} onReviewSubmitted={fetchReviews} />
           </div>
         </div>
       </div>
