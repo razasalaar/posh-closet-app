@@ -7,6 +7,7 @@ import heroBanner from '@/assets/hero-banner.jpg';
 import type { Product } from '@/lib/store';
 import { ImageOff } from 'lucide-react';
 import { usePageSeo } from '@/hooks/usePageSeo';
+import { ProductGridSkeleton } from '@/components/product/ProductCardSkeleton';
 
 interface CategoryWithImage {
   id: string;
@@ -18,6 +19,7 @@ interface CategoryWithImage {
 const Index = () => {
   const [featured, setFeatured] = useState<Product[]>([]);
   const [categories, setCategories] = useState<CategoryWithImage[]>([]);
+  const [loading, setLoading] = useState(true);
 
   usePageSeo({
     title: "Mansa Mussa | Premium Men & Women Clothing Pakistan",
