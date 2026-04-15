@@ -7,6 +7,7 @@ import heroBanner from '@/assets/hero-banner.jpg';
 import type { Product } from '@/lib/store';
 import { ImageOff } from 'lucide-react';
 import { usePageSeo } from '@/hooks/usePageSeo';
+import { ProductGridSkeleton } from '@/components/product/ProductCardSkeleton';
 
 interface CategoryWithImage {
   id: string;
