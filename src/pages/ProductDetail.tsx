@@ -77,6 +77,37 @@ const ProductDetail = () => {
     if (id) fetchProduct();
   }, [id]);
 
+  const fetchReviews = useCallback(async () => {
+    if (!id) return;
+    setReviewsLoading(true);
+    const { data } = await supabase
+      .from('reviews')
+      .select('*')
+      .eq('product_id', id)
+      .order('created_at', { ascending: false });
+    const revs = data || [];
+    setReviews(revs);
+    setTotalReviews(revs.length);
+    setAverageRating(revs.length > 0 ? revs.reduce((sum: number, r: any) => sum + r.rating, 0) / revs.length : 0);
+    setReviewsLoading(false);
+  }, [id]);
+
+  useEffect(() => {
+    fetchReviews();
+  }, [fetchReviews]);
+
+  // Realtime reviews
+  useEffect(() => {
+    if (!id) return;
+    const channel = supabase
+      .channel(`reviews-${id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'reviews', filter: `product_id=eq.${id}` }, () => {
+        fetchReviews();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [id, fetchReviews]);
+
   if (loading) {
     return <Layout><div className="container py-20 text-center font-body">Loading...</div></Layout>;
   }
