@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
@@ -42,6 +42,14 @@ const Checkout = () => {
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [placing, setPlacing] = useState(false);
 
+  // Auto-fill email from logged-in account and skip Step 1
+  useEffect(() => {
+    if (user?.email) {
+      setContact((prev) => ({ ...prev, email: user.email! }));
+      setStep(2); // Skip contact step for logged-in users
+    }
+  }, [user]);
+
   if (items.length === 0) {
     return (
       <Layout>
@@ -82,7 +90,10 @@ const Checkout = () => {
     else if (step === 2 && validateStep2()) setStep(3);
   };
 
-  const handleBack = () => { if (step > 1) setStep((s) => (s - 1) as Step); };
+  const handleBack = () => {
+    if (step === 2 && user?.email) return; // logged-in users can't go back to contact step
+    if (step > 1) setStep((s) => (s - 1) as Step);
+  };
 
   const discountAmount = discountApplied ? Math.round(cartTotal * 0.1) : 0;
   const grandTotal = finalTotal - discountAmount;
@@ -93,7 +104,7 @@ const Checkout = () => {
       const currentUser = (await supabase.auth.getUser()).data.user;
       const { data: order, error: orderError } = await supabase.from('orders').insert({
         user_id: currentUser?.id || null,
-        email: contact.email,
+        email: user?.email || contact.email,
         phone: contact.phone || shipping.phone,
         first_name: shipping.firstName,
         last_name: shipping.lastName,
@@ -164,23 +175,31 @@ const Checkout = () => {
   return (
     <Layout>
       <div className="container py-6 md:py-10 max-w-5xl">
+        {/* Step indicator — hide Step 1 label if user is logged in */}
         <div className="flex items-center justify-center mb-8 gap-2">
-          {stepLabels.map((s, idx) => (
+          {stepLabels
+            .filter((s) => !(user?.email && s.num === 1))
+            .map((s, idx, arr) => (
             <div key={s.num} className="flex items-center gap-2">
               <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-body font-medium transition-colors ${step >= s.num ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
                 {step > s.num ? <Check size={12} /> : <s.icon size={12} />}
                 <span className="hidden sm:inline">{s.label}</span>
                 <span className="sm:hidden">{s.num}</span>
               </div>
-              {idx < stepLabels.length - 1 && <div className={`w-8 md:w-16 h-px ${step > s.num ? 'bg-primary' : 'bg-border'}`} />}
+              {idx < arr.length - 1 && <div className={`w-8 md:w-16 h-px ${step > s.num ? 'bg-primary' : 'bg-border'}`} />}
             </div>
           ))}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
           <div className="lg:col-span-3 space-y-6">
-            {step > 1 && (
+            {step > 1 && !user?.email && (
               <button onClick={handleBack} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground font-body transition-colors">
+                <ChevronLeft size={16} /> Back
+              </button>
+            )}
+            {step > 2 && user?.email && (
+              <button onClick={() => setStep(2)} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground font-body transition-colors">
                 <ChevronLeft size={16} /> Back
               </button>
             )}

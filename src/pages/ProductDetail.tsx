@@ -332,15 +332,6 @@ const ProductDetail = () => {
         </div>
       </div>
 
-      {/* Mobile sticky add to cart */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-background border-t border-border p-4 space-y-2">
-        <Button variant="luxury" size="lg" className="w-full" onClick={handleAddToCart}>
-          <ShoppingBag size={16} /> Add to Cart — {formatPrice(product.price * quantity)}
-        </Button>
-        <Button variant="luxury" size="lg" className="w-full bg-gold hover:bg-gold/90 text-background" onClick={handleBuyNow}>
-          <Zap size={16} /> Buy It Now
-        </Button>
-      </div>
     </Layout>
   );
 };

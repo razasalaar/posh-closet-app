@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
-import { Search, ShoppingBag, Heart, Menu, X, User, ChevronDown, ChevronRight } from 'lucide-react';
-import { useCart } from '@/lib/store';
+import { Link, useNavigate } from 'react-router-dom';
+import { Search, ShoppingBag, Heart, Menu, X, User, ChevronDown, ChevronRight, LogOut, LayoutDashboard } from 'lucide-react';
+import { useCart, useWishlist } from '@/lib/store';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import NotificationBell from '@/components/notifications/NotificationBell';
@@ -19,9 +19,23 @@ const Navbar = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [expandedType, setExpandedType] = useState<string | null>(null);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
   const dropdownTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const profileRef = useRef<HTMLDivElement>(null);
   const itemCount = useCart((s) => s.itemCount());
-  const { user } = useAuth();
+  const wishlistCount = useWishlist((s) => s.items.length);
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  // Derive user info
+  const isGoogleUser = user?.app_metadata?.provider === 'google';
+  const avatarUrl = user?.user_metadata?.avatar_url || user?.user_metadata?.picture || '';
+  const displayName =
+    user?.user_metadata?.full_name ||
+    user?.user_metadata?.name ||
+    user?.email?.split('@')[0] ||
+    'My Account';
+  const userEmail = user?.email || '';
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -29,6 +43,17 @@ const Navbar = () => {
       setCategories(data || []);
     };
     fetchCategories();
+  }, []);
+
+  // Close profile dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+        setProfileOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
   }, []);
 
   const menCategories = categories.filter((c) => c.type === 'men');
@@ -41,6 +66,36 @@ const Navbar = () => {
 
   const handleDropdownLeave = () => {
     dropdownTimeout.current = setTimeout(() => setOpenDropdown(null), 200);
+  };
+
+  const handleSignOut = async () => {
+    setProfileOpen(false);
+    await signOut();
+    navigate('/');
+  };
+
+  const UserAvatar = ({ size = 32 }: { size?: number }) => {
+    if (avatarUrl) {
+      return (
+        <img
+          src={avatarUrl}
+          alt={displayName}
+          referrerPolicy="no-referrer"
+          style={{ width: size, height: size }}
+          className="rounded-full object-cover ring-2 ring-gold/30 hover:ring-gold transition-all"
+        />
+      );
+    }
+    return (
+      <div
+        style={{ width: size, height: size }}
+        className="rounded-full bg-gold/20 flex items-center justify-center ring-2 ring-gold/30 hover:ring-gold transition-all"
+      >
+        <span className="text-gold font-body font-semibold text-xs">
+          {displayName.charAt(0).toUpperCase()}
+        </span>
+      </div>
+    );
   };
 
   return (
@@ -128,9 +183,8 @@ const Navbar = () => {
           <button onClick={() => setSearchOpen(!searchOpen)} className="p-1.5 hover:text-gold transition-colors" aria-label="Search">
             <Search size={18} />
           </button>
-          <Link to={user ? '/dashboard' : '/login'} className="p-1.5 hover:text-gold transition-colors" aria-label="Account">
-            <User size={18} />
-          </Link>
+
+          {/* Cart */}
           <Link to="/cart" className="p-1.5 hover:text-gold transition-colors relative" aria-label="Cart">
             <ShoppingBag size={18} />
             {itemCount > 0 && (
@@ -139,7 +193,89 @@ const Navbar = () => {
               </span>
             )}
           </Link>
+
+          {/* Notification Bell */}
           {user && <NotificationBell />}
+
+          {/* Wishlist icon (desktop) */}
+          <Link to="/wishlist" className="p-1.5 hover:text-gold transition-colors relative hidden lg:flex" aria-label="Wishlist">
+            <Heart size={18} />
+            {wishlistCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 bg-gold text-accent-foreground text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                {wishlistCount}
+              </span>
+            )}
+          </Link>
+
+          {/* Account - profile or icon */}
+          {user ? (
+            <div className="relative" ref={profileRef}>
+              <button
+                onClick={() => setProfileOpen(!profileOpen)}
+                className="p-1 hover:opacity-90 transition-opacity flex items-center"
+                aria-label="Account"
+              >
+                <UserAvatar size={30} />
+              </button>
+
+              {/* Profile Dropdown */}
+              {profileOpen && (
+                <div className="absolute right-0 top-full mt-2 w-64 bg-background border border-border rounded-xl shadow-xl z-50 overflow-hidden animate-fade-in">
+                  {/* User info header */}
+                  <div className="px-4 py-4 bg-surface border-b border-border flex items-center gap-3">
+                    <UserAvatar size={44} />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-body font-semibold text-sm truncate">{displayName}</p>
+                      {userEmail && (
+                        <p className="font-body text-xs text-muted-foreground truncate">{userEmail}</p>
+                      )}
+                      {isGoogleUser && (
+                        <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-body text-muted-foreground bg-background px-1.5 py-0.5 rounded border border-border">
+                          <svg width="10" height="10" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+                          Google Account
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {/* Menu items */}
+                  <div className="py-1">
+                    <Link
+                      to="/dashboard"
+                      onClick={() => setProfileOpen(false)}
+                      className="flex items-center gap-3 px-4 py-3 text-sm font-body hover:bg-surface hover:text-gold transition-colors"
+                    >
+                      <LayoutDashboard size={16} />
+                      My Account
+                    </Link>
+                    <Link
+                      to="/wishlist"
+                      onClick={() => setProfileOpen(false)}
+                      className="flex items-center gap-3 px-4 py-3 text-sm font-body hover:bg-surface hover:text-gold transition-colors"
+                    >
+                      <Heart size={16} />
+                      Wishlist
+                      {wishlistCount > 0 && (
+                        <span className="ml-auto text-xs bg-gold/20 text-gold font-medium px-1.5 py-0.5 rounded-full">{wishlistCount}</span>
+                      )}
+                    </Link>
+                    <div className="border-t border-border mt-1 pt-1">
+                      <button
+                        onClick={handleSignOut}
+                        className="flex items-center gap-3 px-4 py-3 text-sm font-body text-destructive hover:bg-destructive/5 transition-colors w-full text-left"
+                      >
+                        <LogOut size={16} />
+                        Sign Out
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <Link to="/login" className="p-1.5 hover:text-gold transition-colors" aria-label="Account">
+              <User size={18} />
+            </Link>
+          )}
         </div>
       </div>
 
@@ -155,6 +291,23 @@ const Navbar = () => {
       {/* Mobile menu */}
       {menuOpen && (
         <div className="lg:hidden border-t border-border bg-background animate-fade-in">
+          {/* Mobile user profile strip */}
+          {user && (
+            <div className="border-b border-border px-4 py-4 flex items-center gap-3 bg-surface">
+              {avatarUrl ? (
+                <img src={avatarUrl} alt={displayName} referrerPolicy="no-referrer" className="w-10 h-10 rounded-full object-cover ring-2 ring-gold/30" />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-gold/20 flex items-center justify-center ring-2 ring-gold/30">
+                  <span className="text-gold font-body font-semibold">{displayName.charAt(0).toUpperCase()}</span>
+                </div>
+              )}
+              <div>
+                <p className="font-body font-semibold text-sm">{displayName}</p>
+                {userEmail && <p className="font-body text-xs text-muted-foreground">{userEmail}</p>}
+              </div>
+            </div>
+          )}
+
           <nav className="container py-6 flex flex-col gap-1">
             <div>
               <button
@@ -203,9 +356,36 @@ const Navbar = () => {
             <Link to="/collections" onClick={() => setMenuOpen(false)} className="text-sm tracking-widest uppercase font-body font-medium py-3">
               All Collections
             </Link>
-            <Link to={user ? '/dashboard' : '/login'} onClick={() => setMenuOpen(false)} className="text-sm tracking-widest uppercase font-body font-medium py-3">
-              {user ? 'My Account' : 'Login'}
+
+            {/* Wishlist in mobile menu - text only */}
+            <Link
+              to="/wishlist"
+              onClick={() => setMenuOpen(false)}
+              className="flex items-center justify-between text-sm tracking-widest uppercase font-body font-medium py-3"
+            >
+              <span>Wishlist</span>
+              {wishlistCount > 0 && (
+                <span className="text-xs bg-gold text-background font-bold px-2 py-0.5 rounded-full">{wishlistCount}</span>
+              )}
             </Link>
+
+            {user ? (
+              <>
+                <Link to="/dashboard" onClick={() => setMenuOpen(false)} className="text-sm tracking-widest uppercase font-body font-medium py-3">
+                  My Account
+                </Link>
+                <button
+                  onClick={async () => { setMenuOpen(false); await signOut(); navigate('/'); }}
+                  className="text-left text-sm tracking-widest uppercase font-body font-medium py-3 text-destructive"
+                >
+                  Sign Out
+                </button>
+              </>
+            ) : (
+              <Link to="/login" onClick={() => setMenuOpen(false)} className="text-sm tracking-widest uppercase font-body font-medium py-3">
+                Login
+              </Link>
+            )}
           </nav>
         </div>
       )}
