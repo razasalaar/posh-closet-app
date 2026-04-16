@@ -9,7 +9,7 @@ import { formatPrice } from '@/lib/data';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import LoginPromptDialog from '@/components/layout/LoginPromptDialog';
-import { Check, ChevronLeft, CreditCard, Truck, User, ShoppingBag } from 'lucide-react';
+import { Check, ChevronLeft, CreditCard, Truck, User, ShoppingBag, MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 type Step = 1 | 2 | 3;
@@ -33,7 +33,7 @@ const Checkout = () => {
   const finalTotal = cartTotal + shippingCost;
 
   const [step, setStep] = useState<Step>(1);
-  const [paymentMethod, setPaymentMethod] = useState<'cod' | 'card'>('cod');
+  const [paymentMethod, setPaymentMethod] = useState<'cod' | 'whatsapp_cod' | 'card'>('cod');
   const [discountCode, setDiscountCode] = useState('');
   const [discountApplied, setDiscountApplied] = useState(false);
   const [contact, setContact] = useState<ContactInfo>({ email: '', phone: '' });
@@ -41,6 +41,16 @@ const Checkout = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [placing, setPlacing] = useState(false);
+  const [paymentSettings, setPaymentSettings] = useState<any>(null);
+  const [paymentProof, setPaymentProof] = useState<File | null>(null);
+
+  useEffect(() => {
+    const loadPaymentSettings = async () => {
+      const { data } = await supabase.from('payment_settings').select('*').limit(1).maybeSingle();
+      if (data) setPaymentSettings(data);
+    };
+    loadPaymentSettings();
+  }, []);
 
   // Auto-fill email from logged-in account and skip Step 1
   useEffect(() => {
@@ -98,9 +108,35 @@ const Checkout = () => {
   const discountAmount = discountApplied ? Math.round(cartTotal * 0.1) : 0;
   const grandTotal = finalTotal - discountAmount;
 
+  const uploadPaymentProof = async (file: File) => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${crypto.randomUUID()}.${fileExt}`;
+    const { error } = await supabase.storage.from('payment-proofs').upload(fileName, file);
+    if (error) {
+      toast.error('Failed to upload payment proof');
+      return null;
+    }
+    const { data } = supabase.storage.from('payment-proofs').getPublicUrl(fileName);
+    return data.publicUrl;
+  };
+
   const placeOrder = async () => {
+    if (paymentMethod === 'cod' && !paymentProof) {
+      toast.error("Please upload the payment screenshot to proceed");
+      return;
+    }
+    
     setPlacing(true);
     try {
+      let proofUrl = null;
+      if (paymentProof) {
+        proofUrl = await uploadPaymentProof(paymentProof);
+        if (!proofUrl) {
+          setPlacing(false);
+          return;
+        }
+      }
+
       const currentUser = (await supabase.auth.getUser()).data.user;
       const { data: order, error: orderError } = await supabase.from('orders').insert({
         user_id: currentUser?.id || null,
@@ -115,6 +151,10 @@ const Checkout = () => {
         payment_method: paymentMethod,
         discount_code: discountApplied ? discountCode : null,
         discount_amount: discountAmount,
+        advance_amount: paymentMethod === 'cod' ? 1000 : 0,
+        remaining_amount: paymentMethod === 'cod' ? Math.max(0, grandTotal - 1000) : grandTotal,
+        payment_proof: proofUrl,
+        advance_status: (paymentMethod === 'cod' || paymentMethod === 'whatsapp_cod') ? 'pending' : 'none',
       }).select().single();
 
       if (orderError || !order) {
@@ -141,8 +181,15 @@ const Checkout = () => {
         localStorage.setItem('guest_orders', JSON.stringify(guestOrders));
       }
 
+      const checkoutItems = items.map(item => ({
+        name: item.product.name,
+        brand: item.product.brand || 'No Brand',
+        size: item.selectedSize || 'Standard',
+        qty: item.quantity
+      }));
+
       clearCart();
-      navigate('/order-success');
+      navigate('/order-success', { state: { orderId: order.id, paymentMethod, checkoutItems } });
     } catch {
       toast.error('Something went wrong. Please try again.');
     }
@@ -272,22 +319,94 @@ const Checkout = () => {
             {step === 3 && (
               <div className="space-y-6 animate-fade-in">
                 <h2 className="font-heading text-xl tracking-wider">Payment Method</h2>
+                
+                <div className="bg-red-50 border-l-4 border-red-500 p-3.5 rounded-r-lg shadow-sm">
+                  <p className="text-sm font-body text-red-800 font-medium">
+                    <strong className="font-bold">Notice:</strong> An advance payment is strictly required to combat fake orders and ensure genuine deliveries.
+                  </p>
+                </div>
+
                 <div className="space-y-3">
                   <label className={`flex items-center gap-3 p-4 border rounded-lg cursor-pointer transition-all ${paymentMethod === 'cod' ? 'border-primary bg-surface' : 'border-border hover:border-muted-foreground'}`}>
                     <input type="radio" name="payment" value="cod" checked={paymentMethod === 'cod'} onChange={() => setPaymentMethod('cod')} className="accent-primary" />
                     <div>
                       <p className="font-body font-medium text-sm">Cash on Delivery</p>
-                      <p className="font-body text-xs text-muted-foreground">Pay when your order arrives</p>
+                      <p className="font-body text-xs text-muted-foreground leading-relaxed mt-0.5">
+                        Rs. 1000 Advance + Remaining on Delivery<br/>
+                        <span className="opacity-80">(Upload payment proof directly here on website. If you prefer sending it later, choose the second option below)</span>
+                      </p>
                     </div>
                   </label>
-                  {/* <label className={`flex items-center gap-3 p-4 border rounded-lg cursor-pointer transition-all ${paymentMethod === 'card' ? 'border-primary bg-surface' : 'border-border hover:border-muted-foreground'}`}>
-                    <input type="radio" name="payment" value="card" checked={paymentMethod === 'card'} onChange={() => setPaymentMethod('card')} className="accent-primary" />
-                    <div>
-                      <p className="font-body font-medium text-sm">Card Payment</p>
-                      <p className="font-body text-xs text-muted-foreground">Secure payment via Stripe (coming soon)</p>
+
+                  <label className={`flex items-center gap-3 p-4 border rounded-lg cursor-pointer transition-all ${paymentMethod === 'whatsapp_cod' ? 'border-primary bg-surface' : 'border-border hover:border-muted-foreground'}`}>
+                    <input type="radio" name="payment" value="whatsapp_cod" checked={paymentMethod === 'whatsapp_cod'} onChange={() => setPaymentMethod('whatsapp_cod')} className="accent-primary" />
+                    <div className="flex items-center gap-2">
+                       <MessageCircle size={18} className="text-green-500" />
+                       <div>
+                         <p className="font-body font-medium text-sm">Cash on Delivery (WhatsApp Confirmation)</p>
+                         <p className="font-body text-xs text-muted-foreground mt-0.5">Share your Order ID and payment receipt via WhatsApp to verify and confirm your order.</p>
+                       </div>
                     </div>
-                  </label> */}
+                  </label>
                 </div>
+
+                {paymentMethod === 'whatsapp_cod' && (
+                  <div className="bg-green-50/50 p-5 rounded-lg border border-green-200 space-y-4 animate-fade-in shadow-sm">
+                     <p className="text-sm font-body text-green-800 font-medium leading-relaxed">
+                       Your order will be placed directly. Please contact us on WhatsApp with your <strong className="font-bold">Order ID</strong> and <strong className="font-bold">advance payment receipt</strong> so we can verify and confirm your order.
+                     </p>
+                  </div>
+                )}
+
+                {paymentMethod === 'cod' && paymentSettings && (
+                  <div className="bg-muted/50 p-5 rounded-lg border border-border space-y-4 animate-fade-in shadow-sm">
+                    <div className="flex justify-between items-center bg-primary/10 text-primary p-3 rounded-md text-sm font-semibold border border-primary/20">
+                      <span>Advance Payment Required:</span>
+                      <span>Rs. 1000</span>
+                    </div>
+                    
+                    <div className="space-y-3 text-sm font-body text-muted-foreground">
+                      <p className="font-medium text-foreground">Please send Rs. 1000 advance to any of the following accounts to confirm your order:</p>
+                      
+                      <div className="grid gap-3 select-all">
+                        {paymentSettings.easypaisa_number && (
+                          <div className="bg-background border border-border p-3 rounded-md flex justify-between items-center shadow-sm">
+                            <span className="font-semibold text-foreground flex items-center gap-2">Easypaisa</span>
+                            <span className="font-mono text-sm">{paymentSettings.easypaisa_number}</span>
+                          </div>
+                        )}
+                        {paymentSettings.jazzcash_number && (
+                          <div className="bg-background border border-border p-3 rounded-md flex justify-between items-center shadow-sm">
+                            <span className="font-semibold text-foreground flex items-center gap-2">JazzCash</span>
+                            <span className="font-mono text-sm">{paymentSettings.jazzcash_number}</span>
+                          </div>
+                        )}
+                        {paymentSettings.bank_name && (
+                          <div className="bg-background border border-border p-3 rounded-md space-y-1.5 shadow-sm">
+                            <div className="flex justify-between items-center">
+                              <span className="font-semibold text-foreground">Bank Name</span>
+                              <span>{paymentSettings.bank_name}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-xs">Account Title</span>
+                              <span>{paymentSettings.account_title}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-xs">Account Number</span>
+                              <span className="font-mono text-sm">{paymentSettings.account_number}</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 pt-2 border-t border-border mt-4">
+                       <Label className="font-body text-xs tracking-wide uppercase font-semibold text-foreground">Upload Payment Screenshot <span className="text-destructive">*</span></Label>
+                       <Input type="file" accept="image/*" onChange={(e) => setPaymentProof(e.target.files?.[0] || null)} className="font-body cursor-pointer bg-background" />
+                       <p className="text-xs text-muted-foreground">Your order cannot be placed without uploading the payment proof.</p>
+                    </div>
+                  </div>
+                )}
                 {/* <div>
                   <Label className="font-body text-xs tracking-wide uppercase">Discount Code</Label>
                   <div className="flex gap-2 mt-1">

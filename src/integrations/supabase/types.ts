@@ -127,9 +127,44 @@ export type Database = {
           },
         ]
       }
+      payment_settings: {
+        Row: {
+          id: string
+          easypaisa_number: string | null
+          jazzcash_number: string | null
+          bank_name: string | null
+          account_title: string | null
+          account_number: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          easypaisa_number?: string | null
+          jazzcash_number?: string | null
+          bank_name?: string | null
+          account_title?: string | null
+          account_number?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          easypaisa_number?: string | null
+          jazzcash_number?: string | null
+          bank_name?: string | null
+          account_title?: string | null
+          account_number?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
           address: string | null
+          advance_amount: number | null
+          advance_status: string | null
           city: string | null
           created_at: string
           discount_amount: number | null
@@ -139,8 +174,10 @@ export type Database = {
           id: string
           last_name: string | null
           payment_method: string | null
+          payment_proof: string | null
           phone: string | null
           postal_code: string | null
+          remaining_amount: number | null
           status: Database["public"]["Enums"]["order_status"]
           total: number
           updated_at: string
@@ -148,6 +185,8 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          advance_amount?: number | null
+          advance_status?: string | null
           city?: string | null
           created_at?: string
           discount_amount?: number | null
@@ -157,8 +196,10 @@ export type Database = {
           id?: string
           last_name?: string | null
           payment_method?: string | null
+          payment_proof?: string | null
           phone?: string | null
           postal_code?: string | null
+          remaining_amount?: number | null
           status?: Database["public"]["Enums"]["order_status"]
           total: number
           updated_at?: string
@@ -166,6 +207,8 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          advance_amount?: number | null
+          advance_status?: string | null
           city?: string | null
           created_at?: string
           discount_amount?: number | null
@@ -175,8 +218,10 @@ export type Database = {
           id?: string
           last_name?: string | null
           payment_method?: string | null
+          payment_proof?: string | null
           phone?: string | null
           postal_code?: string | null
+          remaining_amount?: number | null
           status?: Database["public"]["Enums"]["order_status"]
           total?: number
           updated_at?: string

@@ -191,16 +191,46 @@ const Dashboard = () => {
                           )}
                         </div>
 
-                        <div className="flex justify-between items-center pt-5 border-t border-border mt-2">
-                          <div className="flex flex-col">
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{order.order_items?.length || 0} ITEMS</span>
-                            <span className="text-xs font-body text-muted-foreground">Paid via {order.payment_method?.toUpperCase()}</span>
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 bg-surface/50 border border-border rounded-xl mt-4 gap-4">
+                          <div className="flex gap-6">
+                            {order.payment_method === 'whatsapp_cod' && order.advance_status === 'pending' ? (
+                              <div className="flex flex-col justify-center">
+                                <span className="text-xs font-body font-bold text-yellow-700 bg-yellow-100/50 px-3 py-1.5 rounded-lg border border-yellow-200">
+                                  Advance Payment Pending Confirmation
+                                </span>
+                              </div>
+                            ) : (
+                              <>
+                                <div className="flex flex-col">
+                                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Advance Paid</span>
+                                  <span className="text-sm font-body font-bold text-gold">{order.advance_amount ? formatPrice(order.advance_amount) : '0'}</span>
+                                </div>
+                                <div className="flex flex-col">
+                                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Remaining on Delivery</span>
+                                  <span className="text-sm font-body font-bold text-foreground">{order.remaining_amount ? formatPrice(order.remaining_amount) : formatPrice(order.total)}</span>
+                                </div>
+                                {order.advance_status && order.advance_status !== 'none' && (
+                                  <div className="flex flex-col">
+                                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Payment Status</span>
+                                    <span className={`text-xs font-semibold px-2 py-0.5 rounded ${order.advance_status === 'verified' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                                      {order.advance_status === 'verified' ? 'Verified' : 'Pending Verification'}
+                                    </span>
+                                  </div>
+                                )}
+                              </>
+                            )}
                           </div>
                           <div className="text-right">
                             <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Total Amount</p>
                             <p className="text-xl font-heading text-foreground tracking-tight">{formatPrice(order.total)}</p>
                           </div>
                         </div>
+                        {order.advance_status === 'verified' && (
+                          <div className="bg-green-50 border border-green-200 text-green-800 text-xs p-3 rounded-lg flex items-center gap-2 mt-2 font-medium">
+                            <CheckCircle size={14} className="text-green-600" />
+                            Your advance payment has been verified. Your order is confirmed.
+                          </div>
+                        )}
                       </div>
                     </div>
                   );

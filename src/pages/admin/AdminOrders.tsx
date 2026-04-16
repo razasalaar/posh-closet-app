@@ -20,6 +20,7 @@ const AdminOrders = () => {
   const itemsPerPage = 10;
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [advanceInputs, setAdvanceInputs] = useState<Record<string, string>>({});
 
   // Filter state
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
@@ -139,6 +140,32 @@ const AdminOrders = () => {
           order_id: order.id,
         });
       }
+    }
+    fetchOrders();
+  };
+
+  const verifyPayment = async (order: any, enteredAdvance?: number) => {
+    let updateData: any = { advance_status: 'verified', status: 'confirmed' };
+    
+    if (order.payment_method === 'whatsapp_cod' && enteredAdvance !== undefined) {
+      updateData.advance_amount = enteredAdvance;
+      updateData.remaining_amount = Math.max(0, order.total - enteredAdvance);
+    }
+    
+    await supabase.from('orders').update(updateData).eq('id', order.id);
+    
+    if (order.user_id) {
+      const msg = order.payment_method === 'whatsapp_cod' && enteredAdvance !== undefined
+        ? `Your advance payment of ${formatPrice(enteredAdvance)} has been confirmed. Remaining ${formatPrice(Math.max(0, order.total - enteredAdvance))} will be collected on delivery.`
+        : `Your advance payment for order #${order.id.slice(0, 8).toUpperCase()} has been verified and your order is confirmed.`;
+        
+      await supabase.from('notifications').insert({
+        user_id: order.user_id,
+        type: `order_confirmed`,
+        title: 'Payment Verified! ✅',
+        message: msg,
+        order_id: order.id,
+      });
     }
     fetchOrders();
   };
@@ -300,6 +327,26 @@ const AdminOrders = () => {
                         <span className="text-muted-foreground block text-[9px] uppercase font-bold tracking-widest">Shipping Address</span>
                         <p className="font-medium leading-relaxed">{order.address || '-'}</p>
                       </div>
+                      <div className="space-y-1.5 p-3 rounded-lg bg-background border border-border/40 shadow-sm col-span-2 md:col-span-4 flex flex-wrap gap-4 items-center">
+                         <div>
+                           <span className="text-muted-foreground block text-[9px] uppercase font-bold tracking-widest">Advance Payment</span>
+                           <p className="font-medium text-gold">{order.advance_amount ? formatPrice(order.advance_amount) : 'None'}</p>
+                         </div>
+                         <div>
+                           <span className="text-muted-foreground block text-[9px] uppercase font-bold tracking-widest">Remaining</span>
+                           <p className="font-medium">{order.remaining_amount ? formatPrice(order.remaining_amount) : formatPrice(order.total)}</p>
+                         </div>
+                         <div>
+                           <span className="text-muted-foreground block text-[9px] uppercase font-bold tracking-widest">Advance Status</span>
+                           <span className={`text-xs px-2 py-0.5 rounded font-semibold ${order.advance_status === 'verified' ? 'bg-green-100 text-green-800' : order.advance_status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-muted text-muted-foreground'}`}>{order.advance_status?.toUpperCase() || 'NONE'}</span>
+                         </div>
+                         {order.payment_proof && (
+                           <div>
+                             <span className="text-muted-foreground block text-[9px] uppercase font-bold tracking-widest">Screenshot</span>
+                             <a href={order.payment_proof} target="_blank" rel="noreferrer" className="text-xs text-blue-500 hover:underline">View Proof</a>
+                           </div>
+                         )}
+                      </div>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-6 text-xs font-body py-4 border-y border-border/50">
@@ -341,7 +388,41 @@ const AdminOrders = () => {
                     </div>
 
                     <div className="flex flex-wrap gap-3 pt-4 border-t border-border/50">
-                      {order.status === 'pending' && (
+                      {order.advance_status === 'pending' && order.payment_method !== 'whatsapp_cod' && (
+                        <Button 
+                          size="sm" 
+                          variant="luxury" 
+                          onClick={() => verifyPayment(order)}
+                          className="h-9 px-5 text-[10px] font-bold tracking-wider"
+                        >
+                          <CheckCircle size={14} className="mr-2" /> VERIFY PAYMENT
+                        </Button>
+                      )}
+                      {order.advance_status === 'pending' && order.payment_method === 'whatsapp_cod' && (
+                        <div className="flex flex-wrap items-center gap-3 w-full bg-green-50/50 p-3 rounded-lg border border-green-200">
+                          <Label className="text-xs font-bold text-green-800">Advance Received:</Label>
+                          <Input 
+                            type="number" 
+                            className="w-32 h-9 text-xs" 
+                            placeholder="e.g. 500" 
+                            value={advanceInputs[order.id] || ''}
+                            onChange={(e) => setAdvanceInputs({...advanceInputs, [order.id]: e.target.value})}
+                          />
+                          <Button 
+                            size="sm" 
+                            variant="luxury" 
+                            onClick={() => {
+                              const val = parseFloat(advanceInputs[order.id]);
+                              if (!val || val <= 0) return toast.error('Enter a valid amount');
+                              verifyPayment(order, val);
+                            }}
+                            className="h-9 px-5 text-[10px] font-bold tracking-wider ml-auto sm:ml-0"
+                          >
+                            <CheckCircle size={14} className="mr-2" /> CONFIRM ORDER
+                          </Button>
+                        </div>
+                      )}
+                      {order.status === 'pending' && order.advance_status !== 'pending' && (
                         <Button 
                           size="sm" 
                           variant="luxury" 

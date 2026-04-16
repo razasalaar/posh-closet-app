@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import NotificationBell from '@/components/notifications/NotificationBell';
-import { Package, ShoppingBag, FolderOpen, LayoutDashboard, ArrowLeft } from 'lucide-react';
+import { Package, ShoppingBag, FolderOpen, LayoutDashboard, ArrowLeft, CreditCard } from 'lucide-react';
 
 const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   const { user, isAdmin, loading } = useAuth();
@@ -21,6 +21,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
     { to: '/admin/products', label: 'Products', icon: ShoppingBag },
     { to: '/admin/categories', label: 'Categories', icon: FolderOpen },
     { to: '/admin/orders', label: 'Orders', icon: Package },
+    { to: '/admin/payment-settings', label: 'Settings', icon: CreditCard },
   ];
 
   return (
