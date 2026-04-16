@@ -106,8 +106,8 @@ const Navbar = () => {
             {menuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
           <Link to="/" className="flex items-center gap-0">
-            <img src={logoIcon} alt="Mansa Mussa" className="h-24 md:h-26 w-auto" />
-            <h1 className='text-yellow-600 text-md -ml-12 md:text-2xl '>MANSA MUSSA</h1>
+            <img src={logoIcon} alt="Mansa Mussa" className="h-20 md:h-20 w-auto" />
+            <h1 className='text-yellow-600 text-md -ml-10 md:text-2xl '>MANSA MUSSA</h1>
           </Link>
         </div>
 
@@ -215,7 +215,7 @@ const Navbar = () => {
                 className="p-1 hover:opacity-90 transition-opacity flex items-center"
                 aria-label="Account"
               >
-                <UserAvatar size={30} />
+                <UserAvatar size={20} />
               </button>
 
               {/* Profile Dropdown */}
