@@ -157,11 +157,6 @@ const Checkout = () => {
     await placeOrder();
   };
 
-  const handleContinueAsGuest = async () => {
-    setShowLoginPrompt(false);
-    await placeOrder();
-  };
-
   const applyDiscount = () => {
     if (discountCode.toUpperCase() === 'LUXE10') setDiscountApplied(true);
   };
@@ -285,15 +280,15 @@ const Checkout = () => {
                       <p className="font-body text-xs text-muted-foreground">Pay when your order arrives</p>
                     </div>
                   </label>
-                  <label className={`flex items-center gap-3 p-4 border rounded-lg cursor-pointer transition-all ${paymentMethod === 'card' ? 'border-primary bg-surface' : 'border-border hover:border-muted-foreground'}`}>
+                  {/* <label className={`flex items-center gap-3 p-4 border rounded-lg cursor-pointer transition-all ${paymentMethod === 'card' ? 'border-primary bg-surface' : 'border-border hover:border-muted-foreground'}`}>
                     <input type="radio" name="payment" value="card" checked={paymentMethod === 'card'} onChange={() => setPaymentMethod('card')} className="accent-primary" />
                     <div>
                       <p className="font-body font-medium text-sm">Card Payment</p>
                       <p className="font-body text-xs text-muted-foreground">Secure payment via Stripe (coming soon)</p>
                     </div>
-                  </label>
+                  </label> */}
                 </div>
-                <div>
+                {/* <div>
                   <Label className="font-body text-xs tracking-wide uppercase">Discount Code</Label>
                   <div className="flex gap-2 mt-1">
                     <Input placeholder="Enter code" value={discountCode} onChange={(e) => setDiscountCode(e.target.value)} className="font-body" disabled={discountApplied} />
@@ -302,7 +297,7 @@ const Checkout = () => {
                     </Button>
                   </div>
                   {discountApplied && <p className="text-xs text-gold font-body mt-1">10% discount applied!</p>}
-                </div>
+                </div> */}
                 <Button variant="luxury" size="lg" className="w-full" onClick={handleCompleteOrder} disabled={placing}>
                   {placing ? 'Placing Order...' : `Complete Order — ${formatPrice(grandTotal)}`}
                 </Button>
@@ -348,7 +343,6 @@ const Checkout = () => {
       <LoginPromptDialog
         open={showLoginPrompt}
         onOpenChange={setShowLoginPrompt}
-        onContinueAsGuest={handleContinueAsGuest}
       />
     </Layout>
   );

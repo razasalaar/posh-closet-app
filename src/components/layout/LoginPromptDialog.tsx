@@ -9,15 +9,14 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useNavigate } from 'react-router-dom';
-import { LogIn, ShoppingBag } from 'lucide-react';
+import { LogIn, ShieldCheck } from 'lucide-react';
 
 interface LoginPromptDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onContinueAsGuest: () => void;
 }
 
-const LoginPromptDialog = ({ open, onOpenChange, onContinueAsGuest }: LoginPromptDialogProps) => {
+const LoginPromptDialog = ({ open, onOpenChange }: LoginPromptDialogProps) => {
   const navigate = useNavigate();
 
   return (
@@ -30,12 +29,18 @@ const LoginPromptDialog = ({ open, onOpenChange, onContinueAsGuest }: LoginPromp
             <span className="block">✓ Track your order status in real-time</span>
             <span className="block">✓ Get notifications on order updates</span>
             <span className="block">✓ View your order history anytime</span>
-            <span className="block mt-2 text-muted-foreground">You can also continue as guest — if you create an account later from the same browser, your orders will be linked automatically.</span>
+            
+            <div className="flex items-start gap-3 mt-5 p-3.5 bg-gold/10 text-gold-foreground rounded-lg border border-gold/30">
+              <ShieldCheck size={18} className="mt-0.5 shrink-0 text-gold" />
+              <span className="block text-sm font-medium leading-snug text-foreground">
+                <strong className="text-gold">Important:</strong> You must be logged in to place an order. This ensures secure tracking and safe delivery of your products.
+              </span>
+            </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-          <AlertDialogCancel onClick={onContinueAsGuest} className="font-body text-sm">
-            <ShoppingBag size={14} className="mr-1" /> Continue as Guest
+          <AlertDialogCancel className="font-body text-sm">
+            Cancel Setup
           </AlertDialogCancel>
           <AlertDialogAction
             onClick={() => { onOpenChange(false); navigate('/login'); }}
