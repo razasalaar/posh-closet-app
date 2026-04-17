@@ -44,18 +44,8 @@ ${itemListText ? `\nMy order details:\n${itemListText}\n\n` : ''}How much advanc
               <div className="space-y-1">
                 <h3 className="font-heading text-green-900 text-lg">Action Required</h3>
                 <p className="text-sm font-body text-green-800">
-                  Please send us your Order ID and payment receipt on WhatsApp to verify your advance payment and officially confirm your order.
+                  Click the button below to confirm your order — your order details will be automatically sent via WhatsApp.
                 </p>
-              </div>
-              
-              <div className="bg-background border border-border rounded-lg p-3 flex justify-between items-center">
-                <div className="flex flex-col">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Order ID</span>
-                  <span className="font-mono text-lg font-bold">#{shortOrderId}</span>
-                </div>
-                <Button variant="outline" size="icon" onClick={handleCopy} className="h-10 w-10 shrink-0">
-                  <Copy size={16} />
-                </Button>
               </div>
 
               <Button 
@@ -65,6 +55,7 @@ ${itemListText ? `\nMy order details:\n${itemListText}\n\n` : ''}How much advanc
                 <a href={`https://wa.me/${whatsappNumber}?text=${whatsappMessage}`} target="_blank" rel="noreferrer">
                   <MessageCircle size={22} />
                   <span>Confirm on WhatsApp</span>
+                  <span className="ml-1">→</span>
                 </a>
               </Button>
             </div>

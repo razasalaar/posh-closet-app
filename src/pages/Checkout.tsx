@@ -33,7 +33,7 @@ const Checkout = () => {
   const finalTotal = cartTotal + shippingCost;
 
   const [step, setStep] = useState<Step>(1);
-  const [paymentMethod, setPaymentMethod] = useState<'cod' | 'whatsapp_cod' | 'card'>('cod');
+  const [paymentMethod, setPaymentMethod] = useState<'cod' | 'whatsapp_cod' | 'card'>('whatsapp_cod');
   const [discountCode, setDiscountCode] = useState('');
   const [discountApplied, setDiscountApplied] = useState(false);
   const [contact, setContact] = useState<ContactInfo>({ email: '', phone: '' });
@@ -370,6 +370,7 @@ const Checkout = () => {
                 </div>
 
                 <div className="space-y-3">
+                  {/* COD with upload proof - commented out for now, uncomment to re-enable
                   <label className={`flex items-center gap-3 p-4 border rounded-lg cursor-pointer transition-all ${paymentMethod === 'cod' ? 'border-primary bg-surface' : 'border-border hover:border-muted-foreground'}`}>
                     <input type="radio" name="payment" value="cod" checked={paymentMethod === 'cod'} onChange={() => setPaymentMethod('cod')} className="accent-primary" />
                     <div>
@@ -380,6 +381,7 @@ const Checkout = () => {
                       </p>
                     </div>
                   </label>
+                  */}
 
                   <label className={`flex items-center gap-3 p-4 border rounded-lg cursor-pointer transition-all ${paymentMethod === 'whatsapp_cod' ? 'border-primary bg-surface' : 'border-border hover:border-muted-foreground'}`}>
                     <input type="radio" name="payment" value="whatsapp_cod" checked={paymentMethod === 'whatsapp_cod'} onChange={() => setPaymentMethod('whatsapp_cod')} className="accent-primary" />
@@ -396,11 +398,12 @@ const Checkout = () => {
                 {paymentMethod === 'whatsapp_cod' && (
                   <div className="bg-green-50/50 p-5 rounded-lg border border-green-200 space-y-4 animate-fade-in shadow-sm">
                      <p className="text-sm font-body text-green-800 font-medium leading-relaxed">
-                       Your order will be placed directly. Please contact us on WhatsApp with your <strong className="font-bold">Order ID</strong> and <strong className="font-bold">advance payment receipt</strong> so we can verify and confirm your order.
+                       Must send minimum <strong className="font-bold">Rs. 500 to 1,000</strong> advance for order confirmation to avoid fake orders.
                      </p>
                   </div>
                 )}
 
+                {/* COD payment proof upload section - commented out for now, uncomment to re-enable
                 {paymentMethod === 'cod' && paymentSettings && (
                   <div className="bg-muted/50 p-5 rounded-lg border border-border space-y-4 animate-fade-in shadow-sm">
                     <div className="flex justify-between items-center bg-primary/10 text-primary p-3 rounded-md text-sm font-semibold border border-primary/20">
@@ -450,6 +453,7 @@ const Checkout = () => {
                     </div>
                   </div>
                 )}
+                */}
                 {/* <div>
                   <Label className="font-body text-xs tracking-wide uppercase">Discount Code</Label>
                   <div className="flex gap-2 mt-1">
