@@ -180,6 +180,15 @@ const ProductDetail = () => {
                   </button>
                 </>
               )}
+              {/* Wishlist button on image */}
+              <button
+                aria-label="Toggle wishlist"
+                title="Toggle wishlist"
+                onClick={() => toggleWishlist(product)}
+                className="absolute bottom-3 right-3 p-2.5 rounded-full bg-background/90 backdrop-blur-sm shadow-md hover:bg-background hover:scale-110 transition-all duration-200"
+              >
+                <Heart size={18} className={isInWishlist ? 'fill-gold text-gold' : 'text-muted-foreground'} />
+              </button>
             </div>
             <div className="flex gap-2">
               {displayImages.map((img, i) => (
@@ -291,17 +300,12 @@ const ProductDetail = () => {
             </div>
 
             {/* Actions */}
-            <div className="flex flex-col gap-3">
-              <div className="flex gap-3">
-                <Button variant="luxury" size="lg" className="flex-1" onClick={handleAddToCart}>
-                  <ShoppingBag size={16} /> Add to Cart
-                </Button>
-                <Button variant="luxury-outline" size="lg" onClick={() => toggleWishlist(product)}>
-                  <Heart size={16} className={isInWishlist ? 'fill-gold text-gold' : ''} />
-                </Button>
-              </div>
-              <Button variant="luxury" size="lg" className="w-full bg-gold hover:bg-gold/90 text-background" onClick={handleBuyNow}>
-                <Zap size={16} /> Buy It Now
+            <div className="flex gap-2.5">
+              <Button variant="luxury" className="flex-1 h-9 md:h-10 px-3 md:px-5 text-[10px] md:text-xs" onClick={handleAddToCart}>
+                <ShoppingBag size={14} className="mr-1" /> Add to Cart
+              </Button>
+              <Button variant="gold" className="flex-1 h-9 md:h-10 px-3 md:px-5 text-[10px] md:text-xs" onClick={handleBuyNow}>
+                <Zap size={14} className="mr-1" /> Buy It Now
               </Button>
             </div>
 
