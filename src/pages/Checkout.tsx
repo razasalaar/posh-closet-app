@@ -4,7 +4,7 @@ import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useCart } from '@/lib/store';
+import { useCart, CartItem } from '@/lib/store';
 import { formatPrice } from '@/lib/data';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -26,7 +26,7 @@ const cities = [
 const Checkout = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { items, total, clearCart } = useCart();
+  const { items, total, clearCart, setItems } = useCart();
   const cartTotal = total();
   const freeShipping = cartTotal >= 10000;
   const shippingCost = freeShipping ? 0 : 500;
@@ -43,6 +43,7 @@ const Checkout = () => {
   const [placing, setPlacing] = useState(false);
   const [paymentSettings, setPaymentSettings] = useState<any>(null);
   const [paymentProof, setPaymentProof] = useState<File | null>(null);
+  const [restoringState, setRestoringState] = useState(() => !!localStorage.getItem('checkout_state'));
 
   useEffect(() => {
     const loadPaymentSettings = async () => {
@@ -52,15 +53,55 @@ const Checkout = () => {
     loadPaymentSettings();
   }, []);
 
+  // Restore checkout state from localStorage (after login redirect)
+  useEffect(() => {
+    const saved = localStorage.getItem('checkout_state');
+    if (saved) {
+      try {
+        const state = JSON.parse(saved);
+        if (state.cartItems && state.cartItems.length > 0) {
+          // Only restore cart if current cart is empty
+          if (items.length === 0) {
+            setItems(state.cartItems);
+          }
+        }
+        if (state.contact) setContact(state.contact);
+        if (state.shipping) setShipping(state.shipping);
+        if (state.paymentMethod) setPaymentMethod(state.paymentMethod);
+        if (state.step) setStep(state.step);
+        if (state.discountCode) setDiscountCode(state.discountCode);
+        if (state.discountApplied) setDiscountApplied(state.discountApplied);
+      } catch (e) {
+        // Invalid JSON, ignore
+      }
+    }
+    setRestoringState(false);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Save checkout state to localStorage before login redirect
+  const saveCheckoutState = () => {
+    const checkoutState = {
+      cartItems: items,
+      contact,
+      shipping,
+      paymentMethod,
+      step,
+      discountCode,
+      discountApplied,
+    };
+    localStorage.setItem('checkout_state', JSON.stringify(checkoutState));
+  };
+
   // Auto-fill email from logged-in account and skip Step 1
   useEffect(() => {
     if (user?.email) {
       setContact((prev) => ({ ...prev, email: user.email! }));
-      setStep(2); // Skip contact step for logged-in users
+      // Only auto-advance to step 2 if no restored checkout state pushed us further
+      setStep((prev) => (prev <= 1 ? 2 : prev));
     }
   }, [user]);
 
-  if (items.length === 0) {
+  if (items.length === 0 && !restoringState) {
     return (
       <Layout>
         <div className="container py-20 text-center">
@@ -189,6 +230,8 @@ const Checkout = () => {
       }));
 
       clearCart();
+      // Clear saved checkout state after successful order
+      localStorage.removeItem('checkout_state');
       navigate('/order-success', { state: { orderId: order.id, paymentMethod, checkoutItems } });
     } catch {
       toast.error('Something went wrong. Please try again.');
@@ -462,6 +505,7 @@ const Checkout = () => {
       <LoginPromptDialog
         open={showLoginPrompt}
         onOpenChange={setShowLoginPrompt}
+        onSaveCheckoutState={saveCheckoutState}
       />
     </Layout>
   );

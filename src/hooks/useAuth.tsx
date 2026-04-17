@@ -58,12 +58,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const signUp = async (email: string, password: string, fullName: string) => {
+    // Redirect to checkout if there's a pending checkout state
+    const hasCheckoutState = localStorage.getItem('checkout_state');
+    const redirectPath = hasCheckoutState ? '/checkout' : '';
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: { full_name: fullName },
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo: `${window.location.origin}${redirectPath}`,
       },
     });
     return { error };
@@ -75,9 +78,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signInWithGoogle = async () => {
+    // Redirect to checkout if there's a pending checkout state
+    const hasCheckoutState = localStorage.getItem('checkout_state');
+    const redirectPath = hasCheckoutState ? '/checkout' : '';
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: window.location.origin },
+      options: { redirectTo: `${window.location.origin}${redirectPath}` },
     });
     return { error };
   };

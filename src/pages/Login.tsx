@@ -28,7 +28,9 @@ const Login = () => {
     if (error) {
       setError(error.message);
     } else {
-      navigate('/');
+      // Redirect to checkout if there's a pending checkout state
+      const hasCheckoutState = localStorage.getItem('checkout_state');
+      navigate(hasCheckoutState ? '/checkout' : '/');
     }
   };
 
