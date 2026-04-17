@@ -107,7 +107,7 @@ const Navbar = () => {
           </button>
           <Link to="/" className="flex items-center gap-0">
             <img src={logoIcon} alt="Mansa Mussa" className="h-20 md:h-20 w-auto" />
-            <h1 className='text-yellow-600 text-md -ml-10 md:text-2xl '>MANSA MUSSA</h1>
+            <h1 className='text-yellow-600 text-sm -ml-10 md:text-2xl '>MANSA MUSSA</h1>
           </Link>
         </div>
 
