@@ -27,6 +27,8 @@ const LoginPromptDialog = ({ open, onOpenChange, onSaveCheckoutState }: LoginPro
     if (onSaveCheckoutState) {
       onSaveCheckoutState();
     }
+    // Signal post-login redirect back to checkout
+    localStorage.setItem('returnPath', '/checkout');
     setError('');
     setLoading(true);
     const { error } = await signInWithGoogle();

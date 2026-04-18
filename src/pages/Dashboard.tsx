@@ -40,6 +40,14 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (!loading && !user) navigate('/login');
+    // If user arrived here after logging in from the checkout popup, send them back
+    if (!loading && user) {
+      const returnPath = localStorage.getItem('returnPath');
+      if (returnPath) {
+        localStorage.removeItem('returnPath');
+        navigate(returnPath, { replace: true });
+      }
+    }
   }, [user, loading, navigate]);
 
   // Link guest orders and fetch
