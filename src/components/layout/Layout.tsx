@@ -1,4 +1,6 @@
-import { ReactNode } from 'react';
+import { ReactNode, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
 import AnnouncementBar from './AnnouncementBar';
 import Navbar from './Navbar';
 import Footer from './Footer';
@@ -9,6 +11,20 @@ interface LayoutProps {
 }
 
 const Layout = ({ children }: LayoutProps) => {
+  const navigate = useNavigate();
+  const { user, loading } = useAuth();
+
+  // After Google OAuth redirect, check if user came from checkout and redirect back
+  useEffect(() => {
+    if (!loading && user) {
+      const returnPath = localStorage.getItem('returnPath');
+      if (returnPath) {
+        localStorage.removeItem('returnPath');
+        navigate(returnPath, { replace: true });
+      }
+    }
+  }, [user, loading, navigate]);
+
   return (
     <div className="min-h-screen flex flex-col">
       <AnnouncementBar />
