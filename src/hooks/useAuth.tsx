@@ -1,6 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 
 interface AuthContextType {
@@ -32,11 +31,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsAdmin(!!data);
   };
 
-  const navigate = useNavigate();
-
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      async (_event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
@@ -45,18 +42,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setIsAdmin(false);
         }
         setLoading(false);
-
-        // Post-login redirect: honour returnPath set by checkout popup,
-        // otherwise fall back to /dashboard for normal logins.
-        if (event === 'SIGNED_IN') {
-          const returnPath = localStorage.getItem('returnPath');
-          if (returnPath) {
-            localStorage.removeItem('returnPath');
-            navigate(returnPath, { replace: true });
-          } else {
-            navigate('/dashboard', { replace: true });
-          }
-        }
       }
     );
 
@@ -70,15 +55,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, []);
 
   const signUp = async (email: string, password: string, fullName: string) => {
+    // Redirect to checkout if there's a pending checkout state
+    const hasCheckoutState = localStorage.getItem('checkout_state');
+    const redirectPath = hasCheckoutState ? '/checkout' : '';
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: { full_name: fullName },
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo: `${window.location.origin}${redirectPath}`,
       },
     });
     return { error };
@@ -90,9 +78,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signInWithGoogle = async () => {
+    // Redirect to checkout if there's a pending checkout state
+    const hasCheckoutState = localStorage.getItem('checkout_state');
+    const redirectPath = hasCheckoutState ? '/checkout' : '';
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: window.location.origin },
+      options: { redirectTo: `${window.location.origin}${redirectPath}` },
     });
     return { error };
   };

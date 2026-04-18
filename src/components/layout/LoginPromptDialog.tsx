@@ -23,19 +23,15 @@ const LoginPromptDialog = ({ open, onOpenChange, onSaveCheckoutState }: LoginPro
   const [error, setError] = useState('');
 
   const handleGoogleSignIn = async () => {
-    // 1. Save full checkout form data to localStorage
+    // Save checkout state before Google OAuth redirect
     if (onSaveCheckoutState) {
       onSaveCheckoutState();
     }
-    // 2. Signal AuthProvider to redirect back to /checkout after login
-    localStorage.setItem('returnPath', '/checkout');
     setError('');
     setLoading(true);
     const { error } = await signInWithGoogle();
     setLoading(false);
     if (error) {
-      // Clean up the returnPath if login fails immediately (e.g. popup blocked)
-      localStorage.removeItem('returnPath');
       setError(error.message);
     }
   };

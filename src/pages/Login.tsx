@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import logoIcon from '@/assets/logo-icon.png';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 
 const Login = () => {
+  const navigate = useNavigate();
   const { signIn, signInWithGoogle } = useAuth();
   const [googleLoading, setGoogleLoading] = useState(false);
   const [googleError, setGoogleError] = useState('');
@@ -26,8 +27,11 @@ const Login = () => {
     setLoading(false);
     if (error) {
       setError(error.message);
+    } else {
+      // Redirect to checkout if there's a pending checkout state
+      const hasCheckoutState = localStorage.getItem('checkout_state');
+      navigate(hasCheckoutState ? '/checkout' : '/');
     }
-    // Navigation is handled by AuthProvider's SIGNED_IN event handler in useAuth.tsx
   };
 
   return (
