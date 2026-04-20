@@ -150,7 +150,6 @@ const Checkout = () => {
 
       const checkoutItems = items.map(i => ({ name: i.product.name, brand: i.product.brand || '', size: i.selectedSize || 'Standard', qty: i.quantity }));
       clearCart();
-      localStorage.removeItem(LS_KEY);
       navigate('/order-success', { state: { orderId: order.id, paymentMethod, checkoutItems } });
     } catch {
       toast.error('Something went wrong.');

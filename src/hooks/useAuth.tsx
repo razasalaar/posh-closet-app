@@ -122,6 +122,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signOut = async () => {
+    // Clear cart and local storage on logout
+    import('@/lib/store').then(({ useCart }) => {
+      useCart.getState().clearCart();
+    });
+    localStorage.removeItem('checkout_state');
     await supabase.auth.signOut();
   };
 
