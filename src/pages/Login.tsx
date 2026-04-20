@@ -28,9 +28,9 @@ const Login = () => {
     if (error) {
       setError(error.message);
     } else {
-      // Redirect to checkout if there's a pending checkout state
-      const hasCheckoutState = localStorage.getItem('checkout_state');
-      navigate(hasCheckoutState ? '/checkout' : '/');
+      // Login page is only reached when user is NOT coming from checkout
+      // (checkout has its own inline auth). Always go to dashboard.
+      navigate('/dashboard');
     }
   };
 

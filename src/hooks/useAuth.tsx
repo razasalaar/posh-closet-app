@@ -2,6 +2,9 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
+// Key used to persist the page to return to after Google OAuth
+export const OAUTH_RETURN_KEY = 'oauth_return_path';
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
@@ -9,7 +12,7 @@ interface AuthContextType {
   isAdmin: boolean;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signInWithGoogle: () => Promise<{ error: any }>;
+  signInWithGoogle: (returnPath?: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
 }
 
@@ -33,13 +36,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      async (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
           setTimeout(() => checkAdmin(session.user.id), 0);
-          // Clean up checkout redirect key after OAuth returns
-          localStorage.removeItem('checkout_return');
+
+          // After Google OAuth, redirect back to stored path (e.g. /checkout)
+          if (event === 'SIGNED_IN') {
+            const returnPath = localStorage.getItem(OAUTH_RETURN_KEY);
+            if (returnPath) {
+              localStorage.removeItem(OAUTH_RETURN_KEY);
+              // Use replace so back-button doesn't loop
+              window.location.replace(returnPath);
+              return;
+            }
+          }
         } else {
           setIsAdmin(false);
         }
@@ -79,14 +91,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return { error };
   };
 
-  const signInWithGoogle = async () => {
-    // Always redirect back to checkout if coming from checkout page
-    const checkoutReturn = localStorage.getItem('checkout_return');
-    const hasCheckoutState = localStorage.getItem('checkout_state');
-    const redirectPath = checkoutReturn || (hasCheckoutState ? '/checkout' : '');
+  const signInWithGoogle = async (returnPath?: string) => {
+    // If a returnPath is passed, persist it so onAuthStateChange can navigate there after OAuth
+    if (returnPath) {
+      localStorage.setItem(OAUTH_RETURN_KEY, returnPath);
+    }
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}${redirectPath}` },
+      options: { redirectTo: window.location.origin },
     });
     return { error };
   };

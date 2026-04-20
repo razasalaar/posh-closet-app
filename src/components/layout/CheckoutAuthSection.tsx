@@ -52,9 +52,8 @@ export const CheckoutAuthSection = ({ onLoginSuccess, savedEmail = '' }: Props) 
 
   const handleGoogle = async () => {
     setGoogleLoading(true);
-    // Save current URL so OAuth redirects back to checkout
-    localStorage.setItem('checkout_return', '/checkout');
-    await signInWithGoogle();
+    // Pass '/checkout' so after OAuth the user lands back here, not on dashboard
+    await signInWithGoogle('/checkout');
     setGoogleLoading(false);
   };
 
