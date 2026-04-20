@@ -47,7 +47,7 @@ const Signup = () => {
             We've sent a confirmation link to <span className="font-semibold text-foreground">{email}</span>.
             Please verify your email to continue.
           </p>
-          <Button variant="luxury" asChild>
+          <Button size="lg" className="bg-gradient-to-r from-[hsl(43,72%,48%)] to-[hsl(36,70%,52%)] hover:from-[hsl(43,72%,42%)] hover:to-[hsl(36,70%,46%)] text-white font-body tracking-widest border-0 shadow-md hover:shadow-lg transition-all duration-200" asChild>
             <Link to="/login">Go to Login</Link>
           </Button>
         </div>
@@ -114,7 +114,7 @@ const Signup = () => {
 
           {error && <p className="text-xs text-destructive font-body">{error}</p>}
 
-          <Button variant="luxury" size="lg" className="w-full" disabled={loading}>
+          <Button size="lg" className="w-full bg-gradient-to-r from-[hsl(43,72%,48%)] to-[hsl(36,70%,52%)] hover:from-[hsl(43,72%,42%)] hover:to-[hsl(36,70%,46%)] text-white font-body tracking-widest border-0 shadow-md hover:shadow-lg transition-all duration-200" disabled={loading}>
             {loading ? <><Loader2 size={16} className="animate-spin mr-2" />Creating Account...</> : 'Create Account'}
           </Button>
         </form>

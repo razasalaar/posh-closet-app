@@ -58,10 +58,10 @@ export const CheckoutAuthSection = ({ onLoginSuccess, savedEmail = '' }: Props) 
   };
 
   return (
-    <div className="border border-border rounded-xl overflow-hidden">
+    <div className="border border-gold/30 rounded-xl overflow-hidden">
       {/* Header */}
-      <div className="flex items-center gap-3 bg-primary text-primary-foreground px-5 py-4">
-        <span className="w-7 h-7 rounded-full border-2 border-primary-foreground flex items-center justify-center text-sm font-bold">1</span>
+      <div className="flex items-center gap-3 bg-gradient-to-r from-[hsl(43,72%,48%)] to-[hsl(36,70%,52%)] text-white px-5 py-4">
+        <span className="w-7 h-7 rounded-full bg-white/20 border border-white/40 flex items-center justify-center text-sm font-bold text-white">1</span>
         <span className="font-heading text-lg tracking-wider">Contact Information</span>
       </div>
 
@@ -122,9 +122,8 @@ export const CheckoutAuthSection = ({ onLoginSuccess, savedEmail = '' }: Props) 
           <div className="space-y-2">
             <Button
               id="checkout-proceed-email"
-              variant="luxury"
               size="lg"
-              className="w-full"
+              className="w-full bg-gradient-to-r from-[hsl(43,72%,48%)] to-[hsl(36,70%,52%)] hover:from-[hsl(43,72%,42%)] hover:to-[hsl(36,70%,46%)] text-white font-body tracking-widest border-0 shadow-md hover:shadow-lg transition-all duration-200"
               onClick={() => setMode('signin')}
             >
               PROCEED TO SHIPPING
@@ -142,9 +141,8 @@ export const CheckoutAuthSection = ({ onLoginSuccess, savedEmail = '' }: Props) 
           <div className="space-y-2">
             <Button
               id="checkout-auth-submit"
-              variant="luxury"
               size="lg"
-              className="w-full"
+              className="w-full bg-gradient-to-r from-[hsl(43,72%,48%)] to-[hsl(36,70%,52%)] hover:from-[hsl(43,72%,42%)] hover:to-[hsl(36,70%,46%)] text-white font-body tracking-widest border-0 shadow-md hover:shadow-lg transition-all duration-200"
               onClick={handleEmailAuth}
               disabled={loading}
             >

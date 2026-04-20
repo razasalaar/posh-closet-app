@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 export interface Product {
   id: string;
@@ -42,9 +43,11 @@ interface WishlistStore {
 
 const cartItemKey = (id: string, size?: string) => `${id}_${size || ''}`;
 
-export const useCart = create<CartStore>((set, get) => ({
-  items: [],
-  addToCart: (product, quantity = 1, selectedSize) => {
+export const useCart = create<CartStore>()(
+  persist(
+    (set, get) => ({
+      items: [],
+      addToCart: (product, quantity = 1, selectedSize) => {
     set((state) => {
       const existing = state.items.find(
         (i) => i.product.id === product.id && i.selectedSize === selectedSize
@@ -88,7 +91,12 @@ export const useCart = create<CartStore>((set, get) => ({
   setItems: (items) => set({ items }),
   total: () => get().items.reduce((sum, i) => sum + i.product.price * i.quantity, 0),
   itemCount: () => get().items.reduce((sum, i) => sum + i.quantity, 0),
-}));
+    }),
+    {
+      name: 'posh-closet-cart',
+    }
+  )
+);
 
 export const useWishlist = create<WishlistStore>((set, get) => ({
   items: [],

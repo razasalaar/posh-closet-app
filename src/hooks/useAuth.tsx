@@ -45,10 +45,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           // After Google OAuth, redirect back to stored path (e.g. /checkout)
           if (event === 'SIGNED_IN') {
             const returnPath = localStorage.getItem(OAUTH_RETURN_KEY);
+            
+            // Check if cart has items
+            let hasCartItems = false;
+            try {
+              const cartState = localStorage.getItem('posh-closet-cart');
+              if (cartState) {
+                const parsed = JSON.parse(cartState);
+                if (parsed.state && parsed.state.items && parsed.state.items.length > 0) {
+                  hasCartItems = true;
+                }
+              }
+            } catch (e) {}
+
             if (returnPath) {
               localStorage.removeItem(OAUTH_RETURN_KEY);
-              // Use replace so back-button doesn't loop
               window.location.replace(returnPath);
+              return;
+            } else if (hasCartItems) {
+              window.location.replace('/checkout');
               return;
             }
           }

@@ -28,9 +28,19 @@ const Login = () => {
     if (error) {
       setError(error.message);
     } else {
-      // Login page is only reached when user is NOT coming from checkout
-      // (checkout has its own inline auth). Always go to dashboard.
-      navigate('/dashboard');
+      // Check if there are cart items
+      let hasCartItems = false;
+      try {
+        const cartState = localStorage.getItem('posh-closet-cart');
+        if (cartState) {
+          const parsed = JSON.parse(cartState);
+          if (parsed.state && parsed.state.items && parsed.state.items.length > 0) {
+            hasCartItems = true;
+          }
+        }
+      } catch (e) {}
+
+      navigate(hasCartItems ? '/checkout' : '/');
     }
   };
 
@@ -80,7 +90,7 @@ const Login = () => {
 
           {error && <p className="text-xs text-destructive font-body">{error}</p>}
 
-          <Button variant="luxury" size="lg" className="w-full" disabled={loading}>
+          <Button size="lg" className="w-full bg-gradient-to-r from-[hsl(43,72%,48%)] to-[hsl(36,70%,52%)] hover:from-[hsl(43,72%,42%)] hover:to-[hsl(36,70%,46%)] text-white font-body tracking-widest border-0 shadow-md hover:shadow-lg transition-all duration-200" disabled={loading}>
             {loading ? <><Loader2 size={16} className="animate-spin mr-2" />Signing in...</> : 'Sign In'}
           </Button>
         </form>

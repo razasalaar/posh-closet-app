@@ -121,7 +121,7 @@ const Collections = () => {
             <span className="text-xs tracking-widest uppercase font-body text-muted-foreground">Filter:</span>
             <button
               onClick={() => setSelectedCategory('all')}
-              className={`text-xs tracking-wider uppercase font-body px-3 py-1.5 rounded-full transition-colors ${selectedCategory === 'all' ? 'bg-primary text-primary-foreground' : 'bg-surface hover:bg-muted'}`}
+              className={`text-xs tracking-wider uppercase font-body px-3 py-1.5 rounded-full transition-colors ${selectedCategory === 'all' ? 'bg-gradient-to-r from-[hsl(43,72%,48%)] to-[hsl(36,70%,52%)] text-white shadow-sm border-0' : 'bg-surface hover:bg-muted'}`}
             >
               All
             </button>
@@ -129,7 +129,7 @@ const Collections = () => {
               <button
                 key={cat.id}
                 onClick={() => setSelectedCategory(cat.id)}
-                className={`text-xs tracking-wider uppercase font-body px-3 py-1.5 rounded-full transition-colors ${selectedCategory === cat.id ? 'bg-primary text-primary-foreground' : 'bg-surface hover:bg-muted'}`}
+                className={`text-xs tracking-wider uppercase font-body px-3 py-1.5 rounded-full transition-colors ${selectedCategory === cat.id ? 'bg-gradient-to-r from-[hsl(43,72%,48%)] to-[hsl(36,70%,52%)] text-white shadow-sm border-0' : 'bg-surface hover:bg-muted'}`}
               >
                 {cat.name}
               </button>
@@ -184,7 +184,7 @@ const Collections = () => {
       {/* Mobile filter button */}
       <button
         onClick={() => setShowFilters(true)}
-        className="md:hidden fixed bottom-20 left-1/2 -translate-x-1/2 z-40 bg-primary text-primary-foreground rounded-full px-6 py-3 flex items-center gap-2 shadow-lg"
+        className="md:hidden fixed bottom-20 left-1/2 -translate-x-1/2 z-40 bg-gradient-to-r from-[hsl(43,72%,48%)] to-[hsl(36,70%,52%)] text-white rounded-full px-6 py-3 flex items-center gap-2 shadow-[0_8px_30px_rgba(184,142,62,0.3)] border-0"
       >
         <SlidersHorizontal size={16} />
         <span className="text-xs tracking-widest uppercase font-body font-semibold">Filter & Sort</span>
@@ -203,7 +203,7 @@ const Collections = () => {
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => setSelectedCategory('all')}
-                  className={`text-xs tracking-wider uppercase font-body px-3 py-1.5 rounded-full transition-colors ${selectedCategory === 'all' ? 'bg-primary text-primary-foreground' : 'bg-surface'}`}
+                  className={`text-xs tracking-wider uppercase font-body px-3 py-1.5 rounded-full transition-colors ${selectedCategory === 'all' ? 'bg-gradient-to-r from-[hsl(43,72%,48%)] to-[hsl(36,70%,52%)] text-white shadow-sm border-0' : 'bg-surface'}`}
                 >
                   All
                 </button>
@@ -211,7 +211,7 @@ const Collections = () => {
                   <button
                     key={cat.id}
                     onClick={() => setSelectedCategory(cat.id)}
-                    className={`text-xs tracking-wider uppercase font-body px-3 py-1.5 rounded-full transition-colors ${selectedCategory === cat.id ? 'bg-primary text-primary-foreground' : 'bg-surface'}`}
+                    className={`text-xs tracking-wider uppercase font-body px-3 py-1.5 rounded-full transition-colors ${selectedCategory === cat.id ? 'bg-gradient-to-r from-[hsl(43,72%,48%)] to-[hsl(36,70%,52%)] text-white shadow-sm border-0' : 'bg-surface'}`}
                   >
                     {cat.name}
                   </button>
@@ -235,7 +235,7 @@ const Collections = () => {
             </div>
             <button
               onClick={() => setShowFilters(false)}
-              className="w-full bg-primary text-primary-foreground py-3 rounded-lg text-xs tracking-widest uppercase font-body font-semibold"
+              className="w-full bg-gradient-to-r from-[hsl(43,72%,48%)] to-[hsl(36,70%,52%)] text-white py-3 rounded-lg text-xs tracking-widest uppercase font-body font-semibold shadow-md border-0"
             >
               Apply Filters
             </button>

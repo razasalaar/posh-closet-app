@@ -162,7 +162,7 @@ const Checkout = () => {
 
   // ─── ORDER SUMMARY SIDEBAR ───────────────────────────────
   const OrderSummary = () => (
-    <div className="bg-[#f5f0e8] rounded-xl p-5 space-y-4">
+    <div className="rounded-xl p-5 space-y-4 backdrop-blur-md bg-white/40 border border-gold/20 shadow-[0_8px_32px_rgba(184,142,62,0.08)]">
       <h3 className="font-heading text-base tracking-wider">Order Summary ({items.length})</h3>
       <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
         {items.map((item, idx) => {
@@ -198,9 +198,9 @@ const Checkout = () => {
 
   // ─── SHIPPING SECTION ─────────────────────────────────────
   const ShippingSection = () => (
-    <div className="border border-border rounded-xl overflow-hidden">
-      <div className="flex items-center gap-3 bg-primary text-primary-foreground px-5 py-4">
-        <span className="w-7 h-7 rounded-full border-2 border-primary-foreground flex items-center justify-center text-sm font-bold">{user ? '1' : '2'}</span>
+    <div className="border border-gold/30 rounded-xl overflow-hidden">
+      <div className="flex items-center gap-3 bg-gradient-to-r from-[hsl(43,72%,48%)] to-[hsl(36,70%,52%)] text-white px-5 py-4">
+        <span className="w-7 h-7 rounded-full bg-white/20 border border-white/40 flex items-center justify-center text-sm font-bold text-white">{user ? '1' : '2'}</span>
         <span className="font-heading text-lg tracking-wider">Shipping</span>
       </div>
       <div className="p-5 space-y-4 bg-background">
@@ -227,7 +227,8 @@ const Checkout = () => {
         {shippingField('phone', 'Phone', '+92 3XX XXXXXXX')}
         <Button
           id="checkout-continue-payment"
-          variant="luxury" size="lg" className="w-full mt-2"
+          size="lg"
+          className="w-full mt-2 bg-gradient-to-r from-[hsl(43,72%,48%)] to-[hsl(36,70%,52%)] hover:from-[hsl(43,72%,42%)] hover:to-[hsl(36,70%,46%)] text-white font-body tracking-widest border-0 shadow-md hover:shadow-lg transition-all duration-200"
           onClick={() => { if (validateShipping()) setStep('payment'); }}
         >
           CONTINUE TO PAYMENT
@@ -238,9 +239,9 @@ const Checkout = () => {
 
   // ─── PAYMENT SECTION ──────────────────────────────────────
   const PaymentSection = () => (
-    <div className="border border-border rounded-xl overflow-hidden">
-      <div className="flex items-center gap-3 bg-primary text-primary-foreground px-5 py-4">
-        <span className="w-7 h-7 rounded-full border-2 border-primary-foreground flex items-center justify-center text-sm font-bold">{user ? '2' : '3'}</span>
+    <div className="border border-gold/30 rounded-xl overflow-hidden">
+      <div className="flex items-center gap-3 bg-gradient-to-r from-[hsl(43,72%,48%)] to-[hsl(36,70%,52%)] text-white px-5 py-4">
+        <span className="w-7 h-7 rounded-full bg-white/20 border border-white/40 flex items-center justify-center text-sm font-bold text-white">{user ? '2' : '3'}</span>
         <span className="font-heading text-lg tracking-wider">Payment</span>
       </div>
       <div className="p-5 space-y-4 bg-background">
@@ -269,7 +270,8 @@ const Checkout = () => {
 
         <Button
           id="checkout-place-order"
-          variant="luxury" size="lg" className="w-full"
+          size="lg"
+          className="w-full bg-gradient-to-r from-[hsl(43,72%,48%)] to-[hsl(36,70%,52%)] hover:from-[hsl(43,72%,42%)] hover:to-[hsl(36,70%,46%)] text-white font-body tracking-widest border-0 shadow-md hover:shadow-lg transition-all duration-200"
           onClick={handlePlaceOrder}
           disabled={placing}
         >
@@ -281,8 +283,8 @@ const Checkout = () => {
 
   // ─── LOCKED PLACEHOLDER ───────────────────────────────────
   const LockedSection = ({ num, label }: { num: number; label: string }) => (
-    <div className="border border-border rounded-xl px-5 py-4 flex items-center gap-3 opacity-50 bg-muted/20">
-      <span className="w-7 h-7 rounded-full border-2 border-muted-foreground flex items-center justify-center text-sm font-bold text-muted-foreground">{num}</span>
+    <div className="border border-gold/10 rounded-xl px-5 py-4 flex items-center gap-3 opacity-40 bg-muted/10">
+      <span className="w-7 h-7 rounded-full border-2 border-gold/30 flex items-center justify-center text-sm font-bold text-gold/50">{num}</span>
       <span className="font-heading text-base tracking-wider text-muted-foreground">{label}</span>
     </div>
   );
@@ -294,7 +296,7 @@ const Checkout = () => {
         {/* Top bar */}
         <div className="border-b border-border">
           <div className="container max-w-5xl py-4 flex items-center justify-between">
-            <Link to="/" className="font-heading text-xl tracking-[0.2em]">MANSA MUSSA</Link>
+            <Link to="/" className="font-heading text-xl tracking-[0.2em] bg-gradient-to-r from-[hsl(43,72%,48%)] to-[hsl(36,70%,52%)] bg-clip-text text-transparent font-bold">MANSA MUSSA</Link>
             <Link to="/cart" className="font-body text-xs tracking-widest uppercase text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors">
               ← Edit Bag
             </Link>
@@ -338,9 +340,9 @@ const Checkout = () => {
                   {step === 'payment' && (
                     <>
                       {/* Collapsed shipping */}
-                      <div className="border border-border rounded-xl px-5 py-4 flex items-center justify-between bg-surface">
+                      <div className="border border-gold/30 rounded-xl px-5 py-4 flex items-center justify-between bg-gradient-to-r from-[hsl(43,72%,97%)] to-[hsl(36,70%,97%)]">
                         <div className="flex items-center gap-3">
-                          <span className="w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold">✓</span>
+                          <span className="w-7 h-7 rounded-full bg-gold text-white flex items-center justify-center text-sm font-bold">✓</span>
                           <span className="font-heading text-base tracking-wider">Shipping</span>
                         </div>
                         <button onClick={() => setStep('shipping')} className="text-xs font-body underline text-muted-foreground">Edit</button>

@@ -17,7 +17,7 @@ const Cart = () => {
           <ShoppingBag size={48} className="mx-auto text-muted-foreground mb-4" />
           <h1 className="font-heading text-2xl tracking-wider mb-2">Your Cart is Empty</h1>
           <p className="text-muted-foreground font-body mb-6">Looks like you haven't added anything yet.</p>
-          <Button variant="luxury" size="lg" asChild>
+          <Button size="lg" className="bg-gradient-to-r from-[hsl(43,72%,48%)] to-[hsl(36,70%,52%)] hover:from-[hsl(43,72%,42%)] hover:to-[hsl(36,70%,46%)] text-white font-body tracking-widest border-0 shadow-md hover:shadow-lg transition-all duration-200" asChild>
             <Link to="/collections">Continue Shopping</Link>
           </Button>
         </div>
@@ -89,7 +89,7 @@ const Cart = () => {
                 Add {formatPrice(10000 - cartTotal)} more for free shipping!
               </p>
             )}
-            <Button variant="luxury" size="lg" className="w-full" asChild>
+            <Button size="lg" className="w-full bg-gradient-to-r from-[hsl(43,72%,48%)] to-[hsl(36,70%,52%)] hover:from-[hsl(43,72%,42%)] hover:to-[hsl(36,70%,46%)] text-white font-body tracking-widest border-0 shadow-md hover:shadow-lg transition-all duration-200" asChild>
               <Link to="/checkout">Proceed to Checkout</Link>
             </Button>
             <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground" onClick={clearCart}>
