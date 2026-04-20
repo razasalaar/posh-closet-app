@@ -57,7 +57,7 @@ const Index = () => {
       </div>
 
       {/* Hero - Full screen clean like Outfitters */}
-      <section className="relative h-[85vh] md:h-[90vh] overflow-hidden">
+      <section className="relative h-[50vh] md:h-[90vh] overflow-hidden">
         <video 
           autoPlay 
           loop 
@@ -80,7 +80,7 @@ const Index = () => {
 
       {/* Scrollable Category Cards with Dynamic Images */}
       {categories.length > 0 && (
-        <section className="py-8 bg-surface/30">
+        <section className="py-4 bg-surface/30">
           <div className="flex gap-4 overflow-x-auto px-6 pb-4 scrollbar-hide">
             {[...menCats, ...womenCats].map((cat) => (
               <Link
@@ -117,7 +117,7 @@ const Index = () => {
 
       {/* Featured Products */}
       {featured.length > 0 && (
-        <section className="container py-12 md:py-20">
+        <section className="container  md:py-8">
           <div className="flex items-center justify-between mb-8">
             <h2 className="font-heading text-xl md:text-2xl tracking-wider uppercase">Featured Style</h2>
             <Link to="/collections" className="text-[10px] tracking-widest uppercase font-body font-bold text-gold hover:text-foreground transition-colors py-1 border-b-2 border-gold/30 hover:border-foreground">
