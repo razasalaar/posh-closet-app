@@ -60,9 +60,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
             if (returnPath) {
               localStorage.removeItem(OAUTH_RETURN_KEY);
-              window.location.replace(returnPath);
+              // Only redirect if we're not already on the target page
+              if (window.location.pathname !== returnPath) {
+                window.location.replace(returnPath);
+              }
               return;
-            } else if (hasCartItems) {
+            } else if (hasCartItems && window.location.pathname !== '/checkout') {
               window.location.replace('/checkout');
               return;
             }
