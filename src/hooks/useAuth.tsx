@@ -38,6 +38,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(session?.user ?? null);
         if (session?.user) {
           setTimeout(() => checkAdmin(session.user.id), 0);
+          // Clean up checkout redirect key after OAuth returns
+          localStorage.removeItem('checkout_return');
         } else {
           setIsAdmin(false);
         }
@@ -78,9 +80,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signInWithGoogle = async () => {
-    // Redirect to checkout if there's a pending checkout state
+    // Always redirect back to checkout if coming from checkout page
+    const checkoutReturn = localStorage.getItem('checkout_return');
     const hasCheckoutState = localStorage.getItem('checkout_state');
-    const redirectPath = hasCheckoutState ? '/checkout' : '';
+    const redirectPath = checkoutReturn || (hasCheckoutState ? '/checkout' : '');
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: `${window.location.origin}${redirectPath}` },
