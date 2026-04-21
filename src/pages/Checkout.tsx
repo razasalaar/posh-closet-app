@@ -30,6 +30,45 @@ const loadSaved = (): Partial<ShippingInfo> => {
   try { return JSON.parse(localStorage.getItem(LS_KEY) || '{}'); } catch { return {}; }
 };
 
+// ─── ORDER SUMMARY (stable component — defined OUTSIDE Checkout) ────
+const OrderSummaryBlock = ({ items, cartTotal, shippingCost, grandTotal }: {
+  items: { product: Product; quantity: number; selectedSize?: string }[];
+  cartTotal: number; shippingCost: number; grandTotal: number;
+}) => (
+  <div className="rounded-xl p-5 space-y-4 backdrop-blur-md bg-white/40 border border-gold/20 shadow-[0_8px_32px_rgba(184,142,62,0.08)]">
+    <h3 className="font-heading text-base tracking-wider">Order Summary ({items.length})</h3>
+    <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
+      {items.map((item, idx) => {
+        const img = item.product.image_url || (item.product as any).images?.[0] || '/placeholder.svg';
+        return (
+          <div key={`${item.product.id}_${idx}`} className="flex gap-3">
+            <div className="relative w-14 h-16 rounded-lg overflow-hidden flex-shrink-0">
+              <img src={img} alt={item.product.name} className="w-full h-full object-cover" />
+              <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">{item.quantity}</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-body font-medium truncate">{item.product.name}</p>
+              <p className="text-[10px] text-muted-foreground font-body">{(item.product as any).brand}</p>
+              {item.selectedSize && <p className="text-[10px] text-gold font-body">Size: {item.selectedSize}</p>}
+              <p className="text-xs font-body font-semibold mt-0.5">{formatPrice(item.product.price * item.quantity)}</p>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+    <div className="border-t border-border pt-3 space-y-2 text-sm font-body">
+      <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>{formatPrice(cartTotal)}</span></div>
+      <div className="flex justify-between">
+        <span className="text-muted-foreground">Shipping</span>
+        <span className={shippingCost === 0 ? 'text-gold font-semibold' : ''}>{shippingCost === 0 ? 'FREE' : formatPrice(500)}</span>
+      </div>
+    </div>
+    <div className="border-t border-border pt-3 flex justify-between font-body font-bold text-base">
+      <span>Total</span><span>{formatPrice(grandTotal)}</span>
+    </div>
+  </div>
+);
+
 const Checkout = () => {
   const navigate = useNavigate();
   const { user, signOut, loading: authLoading } = useAuth();
@@ -90,6 +129,8 @@ const Checkout = () => {
     );
   }
 
+  // Helper that returns JSX — called as a function {shippingField(...)}, NOT as <ShippingField />,
+  // so it does NOT create a new component boundary and won't cause unmount/remount.
   const shippingField = (key: keyof ShippingInfo, label: string, placeholder = '') => (
     <div>
       <Label className="font-body text-xs tracking-widest uppercase">{label}{key !== 'postalCode' && <span className="text-destructive ml-0.5">*</span>}</Label>
@@ -159,135 +200,6 @@ const Checkout = () => {
 
   const handlePlaceOrder = async () => { await placeOrder(); };
 
-  // ─── ORDER SUMMARY SIDEBAR ───────────────────────────────
-  const OrderSummary = () => (
-    <div className="rounded-xl p-5 space-y-4 backdrop-blur-md bg-white/40 border border-gold/20 shadow-[0_8px_32px_rgba(184,142,62,0.08)]">
-      <h3 className="font-heading text-base tracking-wider">Order Summary ({items.length})</h3>
-      <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
-        {items.map((item, idx) => {
-          const img = item.product.image_url || (item.product as any).images?.[0] || '/placeholder.svg';
-          return (
-            <div key={`${item.product.id}_${idx}`} className="flex gap-3">
-              <div className="relative w-14 h-16 rounded-lg overflow-hidden flex-shrink-0">
-                <img src={img} alt={item.product.name} className="w-full h-full object-cover" />
-                <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">{item.quantity}</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-body font-medium truncate">{item.product.name}</p>
-                <p className="text-[10px] text-muted-foreground font-body">{(item.product as any).brand}</p>
-                {item.selectedSize && <p className="text-[10px] text-gold font-body">Size: {item.selectedSize}</p>}
-                <p className="text-xs font-body font-semibold mt-0.5">{formatPrice(item.product.price * item.quantity)}</p>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-      <div className="border-t border-border pt-3 space-y-2 text-sm font-body">
-        <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>{formatPrice(cartTotal)}</span></div>
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">Shipping</span>
-          <span className={shippingCost === 0 ? 'text-gold font-semibold' : ''}>{shippingCost === 0 ? 'FREE' : formatPrice(500)}</span>
-        </div>
-      </div>
-      <div className="border-t border-border pt-3 flex justify-between font-body font-bold text-base">
-        <span>Total</span><span>{formatPrice(grandTotal)}</span>
-      </div>
-    </div>
-  );
-
-  // ─── SHIPPING SECTION ─────────────────────────────────────
-  const ShippingSection = () => (
-    <div className="border border-gold/30 rounded-xl overflow-hidden">
-      <div className="flex items-center gap-3 bg-gradient-to-r from-[hsl(43,72%,48%)] to-[hsl(36,70%,52%)] text-white px-5 py-4">
-        <span className="w-7 h-7 rounded-full bg-white/20 border border-white/40 flex items-center justify-center text-sm font-bold text-white">{user ? '1' : '2'}</span>
-        <span className="font-heading text-lg tracking-wider">Shipping</span>
-      </div>
-      <div className="p-5 space-y-4 bg-background">
-        <div className="grid grid-cols-2 gap-3">
-          {shippingField('firstName', 'First Name')}
-          {shippingField('lastName', 'Last Name')}
-        </div>
-        {shippingField('address', 'Address', 'House/Flat no., Street, Area')}
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <Label className="font-body text-xs tracking-widest uppercase">City <span className="text-destructive">*</span></Label>
-            <select
-              value={shipping.city}
-              onChange={e => setShipping(p => ({ ...p, city: e.target.value }))}
-              className="mt-1 w-full h-10 rounded-md border border-input bg-background px-3 text-sm font-body focus:outline-none focus:ring-2 focus:ring-ring"
-            >
-              <option value="">Select city</option>
-              {CITIES.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-            {errors.city && <p className="text-xs text-destructive mt-1">{errors.city}</p>}
-          </div>
-          {shippingField('postalCode', 'Postal Code', 'Optional')}
-        </div>
-        {shippingField('phone', 'Phone', '+92 3XX XXXXXXX')}
-        <Button
-          id="checkout-continue-payment"
-          size="lg"
-          className="w-full mt-2 bg-gradient-to-r from-[hsl(43,72%,48%)] to-[hsl(36,70%,52%)] hover:from-[hsl(43,72%,42%)] hover:to-[hsl(36,70%,46%)] text-white font-body tracking-widest border-0 shadow-md hover:shadow-lg transition-all duration-200"
-          onClick={() => { if (validateShipping()) setStep('payment'); }}
-        >
-          CONTINUE TO PAYMENT
-        </Button>
-      </div>
-    </div>
-  );
-
-  // ─── PAYMENT SECTION ──────────────────────────────────────
-  const PaymentSection = () => (
-    <div className="border border-gold/30 rounded-xl overflow-hidden">
-      <div className="flex items-center gap-3 bg-gradient-to-r from-[hsl(43,72%,48%)] to-[hsl(36,70%,52%)] text-white px-5 py-4">
-        <span className="w-7 h-7 rounded-full bg-white/20 border border-white/40 flex items-center justify-center text-sm font-bold text-white">{user ? '2' : '3'}</span>
-        <span className="font-heading text-lg tracking-wider">Payment</span>
-      </div>
-      <div className="p-5 space-y-4 bg-background">
-        <div className="bg-amber-50 border-l-4 border-amber-500 p-3.5 rounded-r-lg">
-          <p className="text-sm font-body text-amber-800"><strong>Notice:</strong> Advance payment is required to confirm genuine orders.</p>
-        </div>
-        <label className="flex items-center gap-3 p-4 border border-primary rounded-lg bg-surface cursor-pointer">
-          <input type="radio" checked readOnly className="accent-primary" />
-          <div className="flex items-center gap-2">
-            <MessageCircle size={18} className="text-green-500" />
-            <div>
-              <p className="font-body font-medium text-sm">Cash on Delivery (WhatsApp Confirmation)</p>
-              <p className="font-body text-xs text-muted-foreground mt-0.5">Send Rs. 500–1,000 advance via WhatsApp to confirm your order.</p>
-            </div>
-          </div>
-        </label>
-
-        {/* Shipping summary */}
-        <div className="bg-[#f5f0e8] rounded-lg p-4 text-sm font-body space-y-1">
-          <p className="font-semibold text-xs uppercase tracking-widest text-muted-foreground mb-2">Delivering to</p>
-          <p className="font-medium">{shipping.firstName} {shipping.lastName}</p>
-          <p className="text-muted-foreground">{shipping.address}, {shipping.city}</p>
-          <p className="text-muted-foreground">{shipping.phone}</p>
-          <button onClick={() => setStep('shipping')} className="text-xs underline text-primary mt-1">Edit</button>
-        </div>
-
-        <Button
-          id="checkout-place-order"
-          size="lg"
-          className="w-full bg-gradient-to-r from-[hsl(43,72%,48%)] to-[hsl(36,70%,52%)] hover:from-[hsl(43,72%,42%)] hover:to-[hsl(36,70%,46%)] text-white font-body tracking-widest border-0 shadow-md hover:shadow-lg transition-all duration-200"
-          onClick={handlePlaceOrder}
-          disabled={placing}
-        >
-          {placing ? <><Loader2 size={16} className="animate-spin mr-2" />Placing Order...</> : `COMPLETE ORDER — ${formatPrice(grandTotal)}`}
-        </Button>
-      </div>
-    </div>
-  );
-
-  // ─── LOCKED PLACEHOLDER ───────────────────────────────────
-  const LockedSection = ({ num, label }: { num: number; label: string }) => (
-    <div className="border border-gold/10 rounded-xl px-5 py-4 flex items-center gap-3 opacity-40 bg-muted/10">
-      <span className="w-7 h-7 rounded-full border-2 border-gold/30 flex items-center justify-center text-sm font-bold text-gold/50">{num}</span>
-      <span className="font-heading text-base tracking-wider text-muted-foreground">{label}</span>
-    </div>
-  );
-
   // ─── RENDER ───────────────────────────────────────────────
   return (
     <Layout>
@@ -315,7 +227,11 @@ const Checkout = () => {
               {summaryOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
             </div>
           </button>
-          {summaryOpen && <div className="lg:hidden mb-6"><OrderSummary /></div>}
+          {summaryOpen && (
+            <div className="lg:hidden mb-6">
+              <OrderSummaryBlock items={items} cartTotal={cartTotal} shippingCost={shippingCost} grandTotal={grandTotal} />
+            </div>
+          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
             {/* LEFT: form */}
@@ -333,8 +249,54 @@ const Checkout = () => {
                 <>
                   <LoggedInBadge email={user.email!} onSignOut={signOut} />
 
-                  {step === 'shipping' && <ShippingSection />}
-                  {step === 'shipping' && <LockedSection num={2} label="Payment" />}
+                  {/* ─── SHIPPING SECTION (inlined) ─────────────────────── */}
+                  {step === 'shipping' && (
+                    <div className="border border-gold/30 rounded-xl overflow-hidden">
+                      <div className="flex items-center gap-3 bg-gradient-to-r from-[hsl(43,72%,48%)] to-[hsl(36,70%,52%)] text-white px-5 py-4">
+                        <span className="w-7 h-7 rounded-full bg-white/20 border border-white/40 flex items-center justify-center text-sm font-bold text-white">{user ? '1' : '2'}</span>
+                        <span className="font-heading text-lg tracking-wider">Shipping</span>
+                      </div>
+                      <div className="p-5 space-y-4 bg-background">
+                        <div className="grid grid-cols-2 gap-3">
+                          {shippingField('firstName', 'First Name')}
+                          {shippingField('lastName', 'Last Name')}
+                        </div>
+                        {shippingField('address', 'Address', 'House/Flat no., Street, Area')}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <Label className="font-body text-xs tracking-widest uppercase">City <span className="text-destructive">*</span></Label>
+                            <select
+                              value={shipping.city}
+                              onChange={e => setShipping(p => ({ ...p, city: e.target.value }))}
+                              className="mt-1 w-full h-10 rounded-md border border-input bg-background px-3 text-sm font-body focus:outline-none focus:ring-2 focus:ring-ring"
+                            >
+                              <option value="">Select city</option>
+                              {CITIES.map(c => <option key={c} value={c}>{c}</option>)}
+                            </select>
+                            {errors.city && <p className="text-xs text-destructive mt-1">{errors.city}</p>}
+                          </div>
+                          {shippingField('postalCode', 'Postal Code', 'Optional')}
+                        </div>
+                        {shippingField('phone', 'Phone', '+92 3XX XXXXXXX')}
+                        <Button
+                          id="checkout-continue-payment"
+                          size="lg"
+                          className="w-full mt-2 bg-gradient-to-r from-[hsl(43,72%,48%)] to-[hsl(36,70%,52%)] hover:from-[hsl(43,72%,42%)] hover:to-[hsl(36,70%,46%)] text-white font-body tracking-widest border-0 shadow-md hover:shadow-lg transition-all duration-200"
+                          onClick={() => { if (validateShipping()) setStep('payment'); }}
+                        >
+                          CONTINUE TO PAYMENT
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ─── LOCKED PAYMENT PLACEHOLDER (inlined) ─────────── */}
+                  {step === 'shipping' && (
+                    <div className="border border-gold/10 rounded-xl px-5 py-4 flex items-center gap-3 opacity-40 bg-muted/10">
+                      <span className="w-7 h-7 rounded-full border-2 border-gold/30 flex items-center justify-center text-sm font-bold text-gold/50">2</span>
+                      <span className="font-heading text-base tracking-wider text-muted-foreground">Payment</span>
+                    </div>
+                  )}
 
                   {step === 'payment' && (
                     <>
@@ -346,7 +308,48 @@ const Checkout = () => {
                         </div>
                         <button onClick={() => setStep('shipping')} className="text-xs font-body underline text-muted-foreground">Edit</button>
                       </div>
-                      <PaymentSection />
+
+                      {/* ─── PAYMENT SECTION (inlined) ───────────────────── */}
+                      <div className="border border-gold/30 rounded-xl overflow-hidden">
+                        <div className="flex items-center gap-3 bg-gradient-to-r from-[hsl(43,72%,48%)] to-[hsl(36,70%,52%)] text-white px-5 py-4">
+                          <span className="w-7 h-7 rounded-full bg-white/20 border border-white/40 flex items-center justify-center text-sm font-bold text-white">{user ? '2' : '3'}</span>
+                          <span className="font-heading text-lg tracking-wider">Payment</span>
+                        </div>
+                        <div className="p-5 space-y-4 bg-background">
+                          <div className="bg-amber-50 border-l-4 border-amber-500 p-3.5 rounded-r-lg">
+                            <p className="text-sm font-body text-amber-800"><strong>Notice:</strong> Advance payment is required to confirm genuine orders.</p>
+                          </div>
+                          <label className="flex items-center gap-3 p-4 border border-primary rounded-lg bg-surface cursor-pointer">
+                            <input type="radio" checked readOnly className="accent-primary" />
+                            <div className="flex items-center gap-2">
+                              <MessageCircle size={18} className="text-green-500" />
+                              <div>
+                                <p className="font-body font-medium text-sm">Cash on Delivery (WhatsApp Confirmation)</p>
+                                <p className="font-body text-xs text-muted-foreground mt-0.5">Send Rs. 500–1,000 advance via WhatsApp to confirm your order.</p>
+                              </div>
+                            </div>
+                          </label>
+
+                          {/* Shipping summary */}
+                          <div className="bg-[#f5f0e8] rounded-lg p-4 text-sm font-body space-y-1">
+                            <p className="font-semibold text-xs uppercase tracking-widest text-muted-foreground mb-2">Delivering to</p>
+                            <p className="font-medium">{shipping.firstName} {shipping.lastName}</p>
+                            <p className="text-muted-foreground">{shipping.address}, {shipping.city}</p>
+                            <p className="text-muted-foreground">{shipping.phone}</p>
+                            <button onClick={() => setStep('shipping')} className="text-xs underline text-primary mt-1">Edit</button>
+                          </div>
+
+                          <Button
+                            id="checkout-place-order"
+                            size="lg"
+                            className="w-full bg-gradient-to-r from-[hsl(43,72%,48%)] to-[hsl(36,70%,52%)] hover:from-[hsl(43,72%,42%)] hover:to-[hsl(36,70%,46%)] text-white font-body tracking-widest border-0 shadow-md hover:shadow-lg transition-all duration-200"
+                            onClick={handlePlaceOrder}
+                            disabled={placing}
+                          >
+                            {placing ? <><Loader2 size={16} className="animate-spin mr-2" />Placing Order...</> : `COMPLETE ORDER — ${formatPrice(grandTotal)}`}
+                          </Button>
+                        </div>
+                      </div>
                     </>
                   )}
                 </>
@@ -356,7 +359,7 @@ const Checkout = () => {
             {/* RIGHT: order summary (desktop) */}
             <div className="hidden lg:block lg:col-span-2">
               <div className="sticky top-24">
-                <OrderSummary />
+                <OrderSummaryBlock items={items} cartTotal={cartTotal} shippingCost={shippingCost} grandTotal={grandTotal} />
               </div>
             </div>
           </div>
